@@ -4,147 +4,146 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import { useState, useCallback } from 'react';
-import { StoryState, StoryFull, AppPhase } from '../types';
+import { useState, useCallback, useEffect } from 'react';
+import { StoryState, StoryFull, AppPhase, MadLibState } from '../types';
 import { AIClient } from '../AIClient';
 import { narrationManager } from '../NarrationManager';
 import { soundManager } from '../SoundManager';
+import { storageManager, CachedStory } from '../lib/StorageManager';
 
-/**
- * useStoryEngine
- * 
- * Orchestrates the complex interaction between:
- * 1. AIClient (Story and Avatar Generation)
- * 2. NarrationManager (Audio Playback)
- * 3. SoundManager (UI Feedback)
- * 
- * It manages the app's internal "Mission Control" state.
- */
 export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowApiKeyDialog: (show: boolean) => void) => {
     const [phase, setPhase] = useState<AppPhase>('setup');
     const [isLoading, setIsLoading] = useState(false);
     const [isAvatarLoading, setIsAvatarLoading] = useState(false);
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
+    const [history, setHistory] = useState<CachedStory[]>([]);
+    
     const [input, setInput] = useState<StoryState>({
         heroName: '',
         heroPower: '',
         setting: '',
         sidekick: '',
         problem: '',
-        heroAvatarUrl: ''
+        heroAvatarUrl: '',
+        mode: 'classic',
+        madlibs: { adjective: '', place: '', food: '', sillyWord: '', animal: '', feeling: '' }
     });
+
     const [story, setStory] = useState<StoryFull | null>(null);
     const [currentPartIndex, setCurrentPartIndex] = useState(0);
-    
-    // Narration State
     const [isNarrating, setIsNarrating] = useState(false);
     const [isNarrationLoading, setIsNarrationLoading] = useState(false);
 
-    /** Updates the hero configuration */
-    const handleInputChange = useCallback((field: keyof StoryState, value: string) => {
+    // Sync online status and load history
+    useEffect(() => {
+        const handleStatus = () => setIsOnline(navigator.onLine);
+        window.addEventListener('online', handleStatus);
+        window.addEventListener('offline', handleStatus);
+        
+        storageManager.getAllStories().then(setHistory);
+        
+        return () => {
+            window.removeEventListener('online', handleStatus);
+            window.removeEventListener('offline', handleStatus);
+        };
+    }, []);
+
+    const handleInputChange = useCallback((field: keyof StoryState, value: any) => {
         setInput(prev => ({ ...prev, [field]: value }));
     }, []);
 
-    /** Stops current TTS and resets narrator state */
+    const handleMadLibChange = useCallback((field: keyof MadLibState, value: string) => {
+        setInput(prev => ({ ...prev, madlibs: { ...prev.madlibs, [field]: value } }));
+    }, []);
+
     const stopNarration = useCallback(() => {
         narrationManager.stop();
         setIsNarrating(false);
     }, []);
 
-    /** 
-     * Handles the "Play/Pause" logic for the storyteller.
-     * Includes logic to aggregate lesson/joke text for the final part.
-     */
     const playNarration = useCallback(async () => {
         if (!story) return;
-        
         const state = narrationManager.state;
-        if (state.isPaused) {
-            narrationManager.play();
-            return;
-        }
-        if (state.isPlaying) {
-            narrationManager.pause();
-            return;
-        }
+        if (state.isPaused) { narrationManager.play(); return; }
+        if (state.isPlaying) { narrationManager.pause(); return; }
 
         setIsNarrating(true);
         setIsNarrationLoading(true);
-        
         try {
             const currentPart = story.parts[currentPartIndex];
-            const isLastPart = currentPartIndex === 2;
-            
-            // Build the definitive text string for this part
+            const isLastPart = currentPartIndex === story.parts.length - 1;
             const textToRead = isLastPart 
                 ? `${currentPart.text}. Today's lesson is: ${story.lesson}. Here is a joke: ${story.joke}. ${story.tomorrowHook}` 
                 : currentPart.text;
-                
             await narrationManager.fetchNarration(textToRead);
         } finally {
             setIsNarrationLoading(false);
         }
     }, [story, currentPartIndex]);
 
-    /** Calls the Flash Image model to create a hero portrait */
     const generateAvatar = useCallback(async () => {
-        if (!input.heroName || !input.heroPower) return;
+        if (!isOnline) return;
+        const name = input.mode === 'classic' ? input.heroName : input.madlibs.animal;
+        const power = input.mode === 'classic' ? input.heroPower : input.madlibs.adjective;
+        if (!name || !power) return;
         if (!(await validateApiKey())) return;
 
         setIsAvatarLoading(true);
         try {
-            const url = await AIClient.generateAvatar(input.heroName, input.heroPower);
+            const url = await AIClient.generateAvatar(name, power);
             if (url) {
                 handleInputChange('heroAvatarUrl', url);
                 soundManager.playSparkle();
             }
-        } catch (e) {
-            console.error("Avatar Gen Error:", e);
+        } catch (error: any) {
+            if (error.message?.includes("404")) setShowApiKeyDialog(true);
         } finally {
             setIsAvatarLoading(false);
         }
-    }, [input.heroName, input.heroPower, validateApiKey, handleInputChange]);
+    }, [input, validateApiKey, handleInputChange, setShowApiKeyDialog, isOnline]);
 
-    /** Streams the story JSON from Gemini 3 Pro */
     const generateStory = useCallback(async () => {
+        if (!isOnline) return;
         if (!(await validateApiKey())) return;
-
         setIsLoading(true);
         try {
             const data = await AIClient.streamStory(input);
+            // Save to offline storage automatically
+            await storageManager.saveStory(data, input.heroAvatarUrl);
+            // Refresh history
+            const newHistory = await storageManager.getAllStories();
+            setHistory(newHistory);
+            
             setStory(data);
             setPhase('reading');
             setCurrentPartIndex(0);
             soundManager.playPageTurn();
         } catch (error: any) {
-            console.error("Story Gen Error:", error);
-            if (error.message?.includes("404") || error.message?.includes("entity was not found")) {
-                setShowApiKeyDialog(true);
-            }
+            if (error.message?.includes("404")) setShowApiKeyDialog(true);
         } finally {
             setIsLoading(false);
         }
-    }, [input, validateApiKey, setShowApiKeyDialog]);
+    }, [input, validateApiKey, setShowApiKeyDialog, isOnline]);
 
-    /** Advance the story based on user interaction */
+    const loadStoryFromHistory = useCallback((cached: CachedStory) => {
+        setStory(cached.story);
+        handleInputChange('heroAvatarUrl', cached.avatar || '');
+        setPhase('reading');
+        setCurrentPartIndex(0);
+        soundManager.playPageTurn();
+    }, [handleInputChange]);
+
     const handleChoice = useCallback((choice: string) => {
         soundManager.playChoice();
         stopNarration();
-        
-        if (currentPartIndex < 2) {
-            const nextIndex = currentPartIndex + 1;
-            setCurrentPartIndex(nextIndex);
+        if (currentPartIndex < (story?.parts.length || 0) - 1) {
+            setCurrentPartIndex(prev => prev + 1);
             soundManager.playPageTurn();
-            
-            // Auto-advance audio if the user was already listening
-            if (isNarrating) {
-                setTimeout(() => playNarration(), 1200);
-            }
+            if (isNarrating) setTimeout(() => playNarration(), 1200);
         }
-    }, [currentPartIndex, isNarrating, playNarration, stopNarration]);
+    }, [story, currentPartIndex, isNarrating, playNarration, stopNarration]);
 
-    /** Reset to initial state */
     const reset = useCallback(() => {
-        soundManager.playChoice();
         stopNarration();
         setPhase('setup');
         setStory(null);
@@ -153,20 +152,8 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
     }, [stopNarration]);
 
     return {
-        phase,
-        isLoading,
-        isAvatarLoading,
-        input,
-        story,
-        currentPartIndex,
-        isNarrating,
-        isNarrationLoading,
-        handleInputChange,
-        generateAvatar,
-        generateStory,
-        handleChoice,
-        reset,
-        playNarration,
-        stopNarration
+        phase, isLoading, isAvatarLoading, input, story, currentPartIndex, isNarrating, isNarrationLoading,
+        isOnline, history,
+        handleInputChange, handleMadLibChange, generateAvatar, generateStory, handleChoice, reset, playNarration, stopNarration, loadStoryFromHistory
     };
 };

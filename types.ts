@@ -4,6 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
+export type AppMode = 'classic' | 'madlibs';
+
+export interface MadLibState {
+    adjective: string;
+    place: string;
+    food: string;
+    sillyWord: string;
+    animal: string;
+    feeling: string;
+}
+
 /** 
  * Represents the user-provided parameters for story generation.
  */
@@ -14,6 +25,8 @@ export interface StoryState {
     sidekick: string;
     problem: string;
     heroAvatarUrl?: string;
+    mode: AppMode;
+    madlibs: MadLibState;
 }
 
 /** 
@@ -42,8 +55,6 @@ export interface StoryFull {
  */
 export type AppPhase = 'setup' | 'reading' | 'finished';
 
-// Added missing ComicFace and constants to support legacy Book and Panel components
-
 /**
  * ComicFace interface for managing individual comic book pages.
  */
@@ -57,17 +68,6 @@ export interface ComicFace {
     resolvedChoice?: string;
 }
 
-/**
- * TOTAL_PAGES defines the maximum page count for the book renderer loop.
- */
 export const TOTAL_PAGES = 6;
-
-/**
- * INITIAL_PAGES is the number of pages required to start reading.
- */
 export const INITIAL_PAGES = 3;
-
-/**
- * GATE_PAGE is the threshold index that unlocks the book once generated.
- */
 export const GATE_PAGE = 3;

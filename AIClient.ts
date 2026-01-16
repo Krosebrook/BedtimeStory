@@ -7,41 +7,52 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { StoryState, StoryFull } from "./types";
 
-/**
- * AIClient
- * 
- * Handles all direct communication with Google Gemini models.
- * Uses gemini-3-pro-preview for complex reasoning/storytelling
- * and gemini-2.5-flash-image for high-performance creative visuals.
- */
 export class AIClient {
   private static getAI() {
     return new GoogleGenAI({ apiKey: process.env.API_KEY });
   }
 
-  /**
-   * Generates a branching interactive story with educational components.
-   * Forces a strict 3-part structure with 3 choices per transition.
-   */
   static async streamStory(input: StoryState): Promise<StoryFull> {
     const ai = this.getAI();
-    const prompt = `
-      Create a warm, imaginative bedtime story for a child aged 6-10.
-      
-      HERO: ${input.heroName}
-      SUPERPOWER: ${input.heroPower}
-      WORLD: ${input.setting}
-      COMPANION: ${input.sidekick}
-      CONFLICT: ${input.problem}
+    
+    let prompt = "";
+    if (input.mode === 'classic') {
+      prompt = `
+        Create a warm, imaginative bedtime story for a child aged 6-10.
+        HERO: ${input.heroName}, POWER: ${input.heroPower}, WORLD: ${input.setting}, COMPANION: ${input.sidekick}, CONFLICT: ${input.problem}
+        STRICT ARCHITECTURE: 3 parts, 3 choices per transition. Tone: "Storybook Magic".
+      `;
+    } else {
+      const { adjective, place, food, sillyWord, animal, feeling } = input.madlibs;
+      prompt = `
+        CREATE A "MAD LIBS" MASTERPIECE. 
+        KEYWORDS: 
+        - Adjective: ${adjective}
+        - Place: ${place}
+        - Favorite Food: ${food}
+        - Silly Word: ${sillyWord}
+        - Animal: ${animal}
+        - Feeling: ${feeling}
 
-      STRICT ARCHITECTURE RULES:
-      1. Structure exactly 3 segments: [Introduction/Inciting Incident], [The Choice & The Journey], [The Climax & Cozy Resolution].
-      2. Decision Points: At the end of Part 1 and Part 2, provide exactly 3 distinct, whimsical choices for the hero.
-      3. Tone: "Storybook Magic" - warm, descriptive, and gentle.
-      4. Educational: Include one "Vocabulary Mastery" word that fits the context naturally.
-      5. Closure: End with a moral lesson and a cliffhanger hook for "tomorrow night".
+        STORY REQUIREMENTS:
+        1. This must be a LONG, epic journey (aim for a 5-10 minute reading duration, approx 1200 words total).
+        2. Divide the story into 3 chunky parts. 
+        3. The tone should be hilarious yet cozy.
+        4. Use the Silly Word frequently as a magic incantation or the name of a legendary item.
+        5. The climax must involve the ${food} in a surprising way.
+        6. Provide exactly 3 choices at the end of Part 1 and 2.
+      `;
+    }
 
-      OUTPUT: Valid JSON matching the schema provided. No markdown backticks.
+    prompt += `
+      OUTPUT: Valid JSON matching this schema:
+      title (string), 
+      parts (array of {text, choices, partIndex}), 
+      vocabWord ({word, definition}), 
+      joke (string), 
+      lesson (string), 
+      tomorrowHook (string).
+      No markdown backticks.
     `;
 
     const result = await ai.models.generateContent({
@@ -67,10 +78,7 @@ export class AIClient {
             },
             vocabWord: {
               type: Type.OBJECT,
-              properties: { 
-                word: { type: Type.STRING }, 
-                definition: { type: Type.STRING } 
-              },
+              properties: { word: { type: Type.STRING }, definition: { type: Type.STRING } },
               required: ["word", "definition"]
             },
             joke: { type: Type.STRING },
@@ -87,22 +95,14 @@ export class AIClient {
     return JSON.parse(text) as StoryFull;
   }
 
-  /**
-   * Generates a 1K storybook-style hero portrait.
-   */
   static async generateAvatar(heroName: string, heroPower: string): Promise<string | null> {
     const ai = this.getAI();
-    const prompt = `Whimsical, friendly storybook illustration of a child hero named ${heroName} who has the superpower of ${heroPower}. Soft cinematic lighting, watercolor and ink style, high quality 1K resolution. No text in image.`;
-    
+    const prompt = `Whimsical portrait of ${heroName} with power of ${heroPower}. Storybook style, 1K resolution.`;
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: { parts: [{ text: prompt }] },
     });
-
     const part = response.candidates?.[0]?.content?.parts.find(p => p.inlineData);
-    if (part?.inlineData) {
-      return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-    }
-    return null;
+    return part?.inlineData ? `data:${part.inlineData.mimeType};base64,${part.inlineData.data}` : null;
   }
 }
