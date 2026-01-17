@@ -26,8 +26,6 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
         problem: '',
         heroAvatarUrl: '',
         mode: 'classic',
-        narratorVoice: 'Kore',
-        storyLength: 'medium',
         madlibs: { adjective: '', place: '', food: '', sillyWord: '', animal: '', feeling: '' },
         sleepConfig: { 
             subMode: 'automatic', 
@@ -39,7 +37,6 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
     });
 
     const [story, setStory] = useState<StoryFull | null>(null);
-    const [currentStoryId, setCurrentStoryId] = useState<string | null>(null);
     const [currentPartIndex, setCurrentPartIndex] = useState(0);
     const [isNarrating, setIsNarrating] = useState(false);
     const [isNarrationLoading, setIsNarrationLoading] = useState(false);
@@ -89,16 +86,11 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
             const textToRead = isLastPart 
                 ? `${currentPart.text}. Today's lesson is: ${story.lesson}. Here is a joke: ${story.joke}. ${story.tomorrowHook}` 
                 : currentPart.text;
-            
-            // Critical: Use the selected voice from input state
-            await narrationManager.fetchNarration(textToRead, input.narratorVoice);
-        } catch (err) {
-            console.error("Narration error", err);
-            setIsNarrating(false);
+            await narrationManager.fetchNarration(textToRead);
         } finally {
             setIsNarrationLoading(false);
         }
-    }, [story, currentPartIndex, input.narratorVoice]);
+    }, [story, currentPartIndex]);
 
     // Handle auto-advance for sleep mode
     useEffect(() => {
@@ -130,13 +122,10 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
     }, [currentPartIndex, input.mode, phase, story, playNarration]);
 
     const generateAvatar = useCallback(async () => {
-        if (!isOnline) {
-            alert("✨ Halt, Hero! Creating a new visual requires a link to the Multiverse (Internet Connection). Please connect to Spark your Avatar!");
-            return;
-        }
+        if (!isOnline) return;
         const name = input.mode === 'classic' ? input.heroName : (input.mode === 'sleep' ? input.heroName : input.madlibs.animal);
         const power = input.mode === 'classic' ? input.heroPower : (input.mode === 'sleep' ? 'Sleeping' : input.madlibs.adjective);
-        if (!name) return;
+        if (!name) return; // Power might be optional in sleep mode UI but good to check
         if (!(await validateApiKey())) return;
 
         setIsAvatarLoading(true);
@@ -154,18 +143,13 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
     }, [input, validateApiKey, handleInputChange, setShowApiKeyDialog, isOnline]);
 
     const generateStory = useCallback(async () => {
-        if (!isOnline) {
-            alert("📜 The Memory Jar is full of past tales, but new adventures require a connection to the Infinite Library. Check your internet connection to brew a new magic story!");
-            return;
-        }
+        if (!isOnline) return;
         if (!(await validateApiKey())) return;
         setIsLoading(true);
         try {
             const data = await AIClient.streamStory(input);
             // Save to offline storage automatically
-            const id = await storageManager.saveStory(data, input.heroAvatarUrl);
-            setCurrentStoryId(id);
-            
+            await storageManager.saveStory(data, input.heroAvatarUrl);
             // Refresh history
             const newHistory = await storageManager.getAllStories();
             setHistory(newHistory);
@@ -184,27 +168,11 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
 
     const loadStoryFromHistory = useCallback((cached: CachedStory) => {
         setStory(cached.story);
-        setCurrentStoryId(cached.id);
         handleInputChange('heroAvatarUrl', cached.avatar || '');
         setPhase('reading');
         setCurrentPartIndex(0);
         soundManager.playPageTurn();
     }, [handleInputChange]);
-
-    const deleteStory = useCallback(async (id: string) => {
-        await storageManager.deleteStory(id);
-        const newHistory = await storageManager.getAllStories();
-        setHistory(newHistory);
-        soundManager.playDelete();
-    }, []);
-
-    const submitFeedback = useCallback(async (rating: number, text: string) => {
-        if (currentStoryId) {
-            await storageManager.updateFeedback(currentStoryId, rating, text);
-            const newHistory = await storageManager.getAllStories();
-            setHistory(newHistory);
-        }
-    }, [currentStoryId]);
 
     const handleChoice = useCallback((choice: string) => {
         soundManager.playChoice();
@@ -212,7 +180,6 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
         if (currentPartIndex < (story?.parts.length || 0) - 1) {
             setCurrentPartIndex(prev => prev + 1);
             soundManager.playPageTurn();
-            // Optional: restart narration if it was active
             if (isNarrating) setTimeout(() => playNarration(), 1200);
         }
     }, [story, currentPartIndex, isNarrating, playNarration, stopNarration]);
@@ -221,7 +188,6 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
         stopNarration();
         setPhase('setup');
         setStory(null);
-        setCurrentStoryId(null);
         setCurrentPartIndex(0);
         setInput(prev => ({ ...prev, heroAvatarUrl: '' }));
     }, [stopNarration]);
@@ -229,8 +195,6 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
     return {
         phase, isLoading, isAvatarLoading, input, story, currentPartIndex, isNarrating, isNarrationLoading,
         isOnline, history,
-        handleInputChange, handleMadLibChange, handleSleepConfigChange, 
-        generateAvatar, generateStory, handleChoice, reset, 
-        playNarration, stopNarration, loadStoryFromHistory, deleteStory, submitFeedback
+        handleInputChange, handleMadLibChange, handleSleepConfigChange, generateAvatar, generateStory, handleChoice, reset, playNarration, stopNarration, loadStoryFromHistory
     };
 };

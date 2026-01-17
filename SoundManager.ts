@@ -85,6 +85,26 @@ class SoundManager {
       osc.stop(now + i * 0.1 + 0.4);
     });
   }
+
+  playDelete() {
+    if (this.muted) return;
+    this.init();
+    const osc = this.ctx!.createOscillator();
+    const gain = this.ctx!.createGain();
+    
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(150, this.ctx!.currentTime);
+    osc.frequency.linearRampToValueAtTime(50, this.ctx!.currentTime + 0.2);
+    
+    gain.gain.setValueAtTime(0.2, this.ctx!.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx!.currentTime + 0.2);
+    
+    osc.connect(gain);
+    gain.connect(this.ctx!.destination);
+    
+    osc.start();
+    osc.stop(this.ctx!.currentTime + 0.2);
+  }
 }
 
 export const soundManager = new SoundManager();

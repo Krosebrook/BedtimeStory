@@ -40,16 +40,19 @@ const App: React.FC = () => {
         history,
         handleInputChange,
         handleMadLibChange,
+        handleSleepConfigChange,
         generateAvatar,
         generateStory,
         handleChoice,
         reset,
         playNarration,
         stopNarration,
-        loadStoryFromHistory
+        loadStoryFromHistory,
+        deleteStory,
+        submitFeedback
     } = useStoryEngine(validateApiKey, setShowApiKeyDialog);
 
-    const { narrationTime, narrationDuration } = useNarrationSync(isNarrating);
+    const { narrationTime, narrationDuration, playbackRate, setPlaybackRate } = useNarrationSync(isNarrating);
 
     const toggleMute = () => {
         const nextMute = !isMuted;
@@ -87,6 +90,8 @@ const App: React.FC = () => {
                         isOnline={isOnline}
                         history={history}
                         onLoadHistory={loadStoryFromHistory}
+                        handleSleepConfigChange={handleSleepConfigChange}
+                        onDeleteHistory={deleteStory}
                     />
                 )}
 
@@ -105,6 +110,9 @@ const App: React.FC = () => {
                         onReset={reset}
                         toggleMute={toggleMute}
                         isMuted={isMuted}
+                        playbackRate={playbackRate}
+                        setPlaybackRate={setPlaybackRate}
+                        onSubmitFeedback={submitFeedback}
                     />
                 )}
             </Suspense>
