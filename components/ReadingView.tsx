@@ -37,6 +37,7 @@ interface ReadingViewProps {
  * - Parallax background layers reacting to scroll.
  * - Staggered text entry with blur effects.
  * - Audio progress ring with interactive media controls.
+ * - NEW: Ambient soundscapes and Gamified "Badge" rewards.
  */
 export const ReadingView: React.FC<ReadingViewProps> = ({
     story,
@@ -71,7 +72,25 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
 
     const progressPercent = narrationDuration > 0 ? (narrationTime / narrationDuration) * 100 : 0;
 
-    // Auto-scroll logic for Sleep Mode to keep text in view
+    // Ambient Audio Logic
+    useEffect(() => {
+        if (!isMuted) {
+            // Determine ambient track based on setting/theme
+            const text = (input.setting || input.sleepConfig.theme || '').toLowerCase();
+            if (text.includes('rain') || text.includes('water') || text.includes('ocean')) {
+                soundManager.playAmbient('rain');
+            } else if (text.includes('space') || text.includes('star') || text.includes('moon')) {
+                soundManager.playAmbient('space');
+            } else if (text.includes('forest') || text.includes('garden')) {
+                soundManager.playAmbient('forest');
+            } else {
+                soundManager.playAmbient('magic');
+            }
+        }
+        return () => soundManager.stopAmbient();
+    }, [input, isMuted]);
+
+    // Auto-scroll logic for Sleep Mode
     useEffect(() => {
         if (input.mode === 'sleep' && scrollRef.current) {
              scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
@@ -158,7 +177,7 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                         {input.heroAvatarUrl && (
                             <motion.div 
                                 layoutId="avatar"
-                                className="w-32 h-32 border-[8px] border-black rounded-full overflow-hidden shadow-[8px_8px_0px_rgba(0,0,0,1)] mb-8 bg-white"
+                                className={`w-32 h-32 border-[8px] border-black rounded-full overflow-hidden shadow-[8px_8px_0px_rgba(0,0,0,1)] mb-8 bg-white ${isSleepMode ? 'animate-breathe' : ''}`}
                             >
                                 <img src={input.heroAvatarUrl} alt={`${input.heroName} avatar`} className="w-full h-full object-cover" />
                             </motion.div>
@@ -239,6 +258,24 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                                 transition={{ duration: 1.2, delay: 0.3 }}
                                 className={`mt-24 pt-16 border-t-[8px] border-double space-y-12 ${isSleepMode ? 'border-indigo-800' : 'border-black'}`}
                             >
+                                {/* REWARD BADGE - GAMIFICATION HOOK */}
+                                {story.rewardBadge && (
+                                    <motion.div 
+                                        initial={{ scale: 0.5, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        transition={{ type: "spring", bounce: 0.5 }}
+                                        className="bg-gradient-to-br from-yellow-200 to-yellow-400 p-8 rounded-3xl border-[6px] border-black shadow-[12px_12px_0px_rgba(0,0,0,0.3)] text-center relative overflow-hidden"
+                                    >
+                                        <div className="absolute inset-0 bg-white/30 animate-pulse"></div>
+                                        <h3 className="relative font-comic text-2xl uppercase tracking-widest text-yellow-900 mb-4">New Memory Unlocked!</h3>
+                                        <div className="relative text-8xl mb-4 drop-shadow-md filter hover:brightness-110 transition-all cursor-pointer transform hover:scale-110">
+                                            {story.rewardBadge.emoji}
+                                        </div>
+                                        <h4 className="relative font-comic text-4xl text-black mb-2">{story.rewardBadge.title}</h4>
+                                        <p className="relative font-serif italic text-yellow-900">{story.rewardBadge.description}</p>
+                                    </motion.div>
+                                )}
+
                                 <div className={`p-10 border-4 shadow-[12px_12px_0px_rgba(0,0,0,0.2)] -rotate-1 hover:rotate-0 transition-transform duration-500 ${isSleepMode ? 'bg-indigo-900 border-indigo-700 text-indigo-100' : 'bg-green-50 border-black text-green-800'}`}>
                                     <h3 className="font-comic text-4xl mb-6 underline decoration-yellow-400 underline-offset-8">Morning Mission</h3>
                                     <p className="text-3xl font-serif italic leading-relaxed">{story.lesson}</p>

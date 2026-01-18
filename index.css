@@ -58,3 +58,14 @@ body {
 .animate-float {
   animation: float 3s ease-in-out infinite;
 }
+
+/* Breathing animation for sleep/avatar */
+@keyframes breathe {
+    0% { transform: scale(1); filter: brightness(100%); }
+    50% { transform: scale(1.05); filter: brightness(110%); }
+    100% { transform: scale(1); filter: brightness(100%); }
+}
+
+.animate-breathe {
+    animation: breathe 6s ease-in-out infinite;
+}

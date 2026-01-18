@@ -128,9 +128,11 @@ export class AIClient {
       vocabWord ({word, definition}), 
       joke (string), 
       lesson (string), 
-      tomorrowHook (string).
+      tomorrowHook (string),
+      rewardBadge ({emoji, title, description}).
       No markdown backticks.
       IMPORTANT: For sleep mode, 'choices' array must be empty or null.
+      rewardBadge should be a fun achievement based on the story content (e.g. "Golden Feather").
     `;
 
     const result = await ai.models.generateContent({
@@ -161,9 +163,18 @@ export class AIClient {
             },
             joke: { type: Type.STRING },
             lesson: { type: Type.STRING },
-            tomorrowHook: { type: Type.STRING }
+            tomorrowHook: { type: Type.STRING },
+            rewardBadge: {
+                type: Type.OBJECT,
+                properties: {
+                    emoji: { type: Type.STRING },
+                    title: { type: Type.STRING },
+                    description: { type: Type.STRING }
+                },
+                required: ["emoji", "title", "description"]
+            }
           },
-          required: ["title", "parts", "vocabWord", "joke", "lesson", "tomorrowHook"]
+          required: ["title", "parts", "vocabWord", "joke", "lesson", "tomorrowHook", "rewardBadge"]
         }
       }
     });

@@ -110,6 +110,8 @@ export interface StoryFull {
     lesson: string;
     /** A teaser sentence for a potential sequel. */
     tomorrowHook: string;
+    /** Gamification reward for completing the story. */
+    rewardBadge: { emoji: string; title: string; description: string };
 }
 
 /** 
