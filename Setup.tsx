@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { StoryState, MadLibState, SleepConfig, StoryLength } from './types';
 import { HeroHeader } from './HeroHeader';
 import { CachedStory } from './lib/StorageManager';
+import { LoadingFX } from './LoadingFX';
 
 interface SetupProps {
     input: StoryState;
@@ -39,10 +40,10 @@ export const Setup: React.FC<SetupProps> = ({
     const isReady = input.mode === 'madlibs' ? isMadLibReady : (input.mode === 'sleep' ? isSleepReady : isClassicReady);
 
     const sleepThemes = [
-        { name: 'Cloud Kingdom', icon: '☁️', color: 'bg-blue-100' },
-        { name: 'Starry Space', icon: '✨', color: 'bg-indigo-200' },
-        { name: 'Deep Ocean', icon: '🌊', color: 'bg-cyan-100' },
-        { name: 'Magic Forest', icon: '🌲', color: 'bg-emerald-100' }
+        { name: 'Cloud Kingdom', icon: '☁️', color: 'bg-blue-100', accent: 'border-blue-400' },
+        { name: 'Starry Space', icon: '✨', color: 'bg-indigo-100', accent: 'border-indigo-400' },
+        { name: 'Deep Ocean', icon: '🌊', color: 'bg-cyan-100', accent: 'border-cyan-400' },
+        { name: 'Magic Forest', icon: '🌲', color: 'bg-emerald-100', accent: 'border-emerald-400' }
     ];
 
     const voices = [
@@ -53,11 +54,11 @@ export const Setup: React.FC<SetupProps> = ({
         { id: 'Aoede', label: 'Bright (Aoede)', icon: '🐦' },
     ];
 
-    const lengthLabels: Record<StoryLength, string> = {
-        short: 'Short (~3 min)',
-        medium: 'Medium (~5 min)',
-        long: 'Epic (~10 min)'
-    };
+    const lengths: { id: StoryLength, label: string, time: string, icon: string, color: string }[] = [
+        { id: 'short', label: 'Quick Tale', time: '3m', icon: '⚡', color: 'border-green-400 text-green-700' },
+        { id: 'medium', label: 'Full Story', time: '7m', icon: '📖', color: 'border-blue-400 text-blue-700' },
+        { id: 'long', label: 'Epic Saga', time: '15m', icon: '🏰', color: 'border-purple-400 text-purple-700' }
+    ];
 
     return (
         <motion.div 
@@ -94,8 +95,22 @@ export const Setup: React.FC<SetupProps> = ({
                 {/* Main Form */}
                 <motion.div 
                     layout
-                    className="lg:col-span-2 bg-white border-[6px] border-black shadow-[16px_16px_0px_rgba(30,58,138,0.5)] p-8 md:p-12 relative z-20"
+                    className="lg:col-span-2 bg-white border-[6px] border-black shadow-[16px_16px_0px_rgba(30,58,138,0.5)] p-8 md:p-12 relative z-20 overflow-hidden"
                 >
+                    {/* engaging loading state overlay */}
+                    <AnimatePresence>
+                        {isLoading && (
+                            <motion.div 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center text-center"
+                            >
+                                <LoadingFX />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
                     <div className="flex flex-col items-center mb-12">
                         <div className="relative group">
                             <motion.div className="w-36 h-36 bg-yellow-100 border-[6px] border-black rounded-full flex items-center justify-center overflow-hidden shadow-[8px_8px_0px_rgba(0,0,0,1)]">
@@ -137,26 +152,26 @@ export const Setup: React.FC<SetupProps> = ({
                             <motion.div key="classic" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-1">
-                                        <label className="font-comic text-blue-700">Hero Name</label>
-                                        <input value={input.heroName} onChange={e => onChange('heroName', e.target.value)} placeholder="e.g. Captain Cosmic" className="w-full border-4 border-black p-3" />
+                                        <label className="font-comic text-blue-700 text-sm uppercase">Hero Name</label>
+                                        <input value={input.heroName} onChange={e => onChange('heroName', e.target.value)} placeholder="e.g. Captain Cosmic" className="w-full border-4 border-black p-3 text-lg" />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="font-comic text-red-600">Super Power</label>
-                                        <input value={input.heroPower} onChange={e => onChange('heroPower', e.target.value)} placeholder="e.g. Flight" className="w-full border-4 border-black p-3" />
+                                        <label className="font-comic text-red-600 text-sm uppercase">Super Power</label>
+                                        <input value={input.heroPower} onChange={e => onChange('heroPower', e.target.value)} placeholder="e.g. Flight" className="w-full border-4 border-black p-3 text-lg" />
                                     </div>
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="font-comic text-purple-700">Setting</label>
-                                    <input value={input.setting} onChange={e => onChange('setting', e.target.value)} placeholder="e.g. Floating Island" className="w-full border-4 border-black p-3" />
+                                    <label className="font-comic text-purple-700 text-sm uppercase">Setting</label>
+                                    <input value={input.setting} onChange={e => onChange('setting', e.target.value)} placeholder="e.g. Floating Island" className="w-full border-4 border-black p-3 text-lg" />
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-1">
-                                        <label className="font-comic text-green-700">Sidekick</label>
-                                        <input value={input.sidekick} onChange={e => onChange('sidekick', e.target.value)} placeholder="e.g. Robotic Owl" className="w-full border-4 border-black p-3" />
+                                        <label className="font-comic text-green-700 text-sm uppercase">Sidekick</label>
+                                        <input value={input.sidekick} onChange={e => onChange('sidekick', e.target.value)} placeholder="e.g. Robotic Owl" className="w-full border-4 border-black p-3 text-lg" />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="font-comic text-orange-600">Trouble</label>
-                                        <input value={input.problem} onChange={e => onChange('problem', e.target.value)} placeholder="e.g. Stolen Sun" className="w-full border-4 border-black p-3" />
+                                        <label className="font-comic text-orange-600 text-sm uppercase">Trouble</label>
+                                        <input value={input.problem} onChange={e => onChange('problem', e.target.value)} placeholder="e.g. Stolen Sun" className="w-full border-4 border-black p-3 text-lg" />
                                     </div>
                                 </div>
                             </motion.div>
@@ -195,36 +210,39 @@ export const Setup: React.FC<SetupProps> = ({
                                     )}
 
                                     {input.sleepConfig.subMode === 'parent-madlib' && (
-                                        <div className="space-y-4 bg-indigo-50/80 p-6 border-4 border-indigo-200 rounded-2xl">
-                                            <h4 className="font-comic text-indigo-800 text-lg uppercase tracking-wider mb-2">Grounding Elements</h4>
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <div className="space-y-1">
-                                                    <span className="text-xs font-bold uppercase text-indigo-400">Texture</span>
-                                                    <input value={input.sleepConfig.texture} onChange={e => handleSleepConfigChange('texture', e.target.value)} placeholder="e.g. Silk" className="w-full border-b-2 border-indigo-300 bg-transparent p-2 focus:outline-none" />
+                                        <div className="space-y-6 bg-indigo-50/80 p-6 border-4 border-indigo-200 rounded-3xl shadow-inner">
+                                            <h4 className="font-comic text-indigo-800 text-xl uppercase tracking-widest mb-4 text-center">Guided Sensory Elements</h4>
+                                            <div className="grid grid-cols-1 gap-6">
+                                                <div className="relative group">
+                                                    <span className="absolute -top-3 left-4 bg-white px-2 text-[10px] font-black uppercase text-indigo-500 border border-indigo-200 rounded-full">A Soft Texture</span>
+                                                    <input value={input.sleepConfig.texture} onChange={e => handleSleepConfigChange('texture', e.target.value)} placeholder="e.g. Silk Blanket" className="w-full border-4 border-indigo-100 bg-white p-4 pt-5 rounded-2xl focus:border-indigo-500 outline-none text-lg transition-all" />
                                                 </div>
-                                                <div className="space-y-1">
-                                                    <span className="text-xs font-bold uppercase text-indigo-400">Sound</span>
-                                                    <input value={input.sleepConfig.sound} onChange={e => handleSleepConfigChange('sound', e.target.value)} placeholder="e.g. Gentle Rain" className="w-full border-b-2 border-indigo-300 bg-transparent p-2 focus:outline-none" />
+                                                <div className="relative group">
+                                                    <span className="absolute -top-3 left-4 bg-white px-2 text-[10px] font-black uppercase text-indigo-500 border border-indigo-200 rounded-full">A Gentle Sound</span>
+                                                    <input value={input.sleepConfig.sound} onChange={e => handleSleepConfigChange('sound', e.target.value)} placeholder="e.g. Soft Hum" className="w-full border-4 border-indigo-100 bg-white p-4 pt-5 rounded-2xl focus:border-indigo-500 outline-none text-lg transition-all" />
                                                 </div>
-                                                <div className="space-y-1">
-                                                    <span className="text-xs font-bold uppercase text-indigo-400">Scent</span>
-                                                    <input value={input.sleepConfig.scent} onChange={e => handleSleepConfigChange('scent', e.target.value)} placeholder="e.g. Lavender" className="w-full border-b-2 border-indigo-300 bg-transparent p-2 focus:outline-none" />
+                                                <div className="relative group">
+                                                    <span className="absolute -top-3 left-4 bg-white px-2 text-[10px] font-black uppercase text-indigo-500 border border-indigo-200 rounded-full">A Cozy Scent</span>
+                                                    <input value={input.sleepConfig.scent} onChange={e => handleSleepConfigChange('scent', e.target.value)} placeholder="e.g. Lavender" className="w-full border-4 border-indigo-100 bg-white p-4 pt-5 rounded-2xl focus:border-indigo-500 outline-none text-lg transition-all" />
                                                 </div>
                                             </div>
+                                            <p className="text-xs text-indigo-400 italic mt-2 text-center">Add things your child can experience now to ground them in the magic.</p>
                                         </div>
                                     )}
 
                                     {input.sleepConfig.subMode === 'child-friendly' && (
                                         <div className="grid grid-cols-2 gap-4">
                                             {sleepThemes.map(theme => (
-                                                <button 
+                                                <motion.button 
                                                     key={theme.name}
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
                                                     onClick={() => handleSleepConfigChange('theme', theme.name)}
-                                                    className={`p-6 border-4 rounded-3xl flex flex-col items-center gap-3 transition-all ${input.sleepConfig.theme === theme.name ? `border-indigo-600 ${theme.color} scale-105 shadow-xl` : 'border-slate-100 bg-slate-50 opacity-40 hover:opacity-100 hover:scale-102'}`}
+                                                    className={`p-6 border-4 rounded-[2rem] flex flex-col items-center gap-3 transition-all ${input.sleepConfig.theme === theme.name ? `border-indigo-600 ${theme.color} shadow-[8px_8px_0px_rgba(49,46,129,0.3)]` : 'border-slate-50 bg-slate-50 opacity-40 hover:opacity-100'}`}
                                                 >
-                                                    <span className="text-5xl drop-shadow-sm">{theme.icon}</span>
-                                                    <span className="font-comic text-indigo-900">{theme.name}</span>
-                                                </button>
+                                                    <span className="text-6xl drop-shadow-sm">{theme.icon}</span>
+                                                    <span className="font-comic text-indigo-900 text-lg uppercase tracking-tight">{theme.name}</span>
+                                                </motion.button>
                                             ))}
                                         </div>
                                     )}
@@ -233,46 +251,41 @@ export const Setup: React.FC<SetupProps> = ({
                         )}
                     </AnimatePresence>
                     
-                    {/* Story Length Slider */}
+                    {/* Story Length Selection */}
                     <div className="mt-12 pt-8 border-t-4 border-slate-100">
-                        <label className="font-comic text-gray-400 mb-4 block uppercase text-sm tracking-widest text-center">Narrative Scope</label>
-                        <div className="relative pt-6 pb-2 px-8">
-                             <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-300 mb-4 absolute -top-1 left-8 right-8">
-                                <span>Short</span>
-                                <span>Medium</span>
-                                <span>Epic</span>
-                            </div>
-                            <input 
-                                type="range" 
-                                min="0" 
-                                max="2" 
-                                step="1"
-                                value={input.storyLength === 'short' ? 0 : input.storyLength === 'medium' ? 1 : 2}
-                                onChange={(e) => {
-                                    const val = parseInt(e.target.value);
-                                    const len = val === 0 ? 'short' : val === 1 ? 'medium' : 'long';
-                                    onChange('storyLength', len);
-                                }}
-                                className="w-full h-4 bg-slate-100 rounded-full appearance-none cursor-pointer accent-blue-600 border-2 border-slate-200"
-                            />
-                            <div className="text-center font-comic text-2xl text-blue-600 mt-4 animate-pulse">
-                                {lengthLabels[input.storyLength]}
-                            </div>
+                        <label className="font-comic text-gray-400 mb-6 block uppercase text-sm tracking-widest text-center">Tale Magnitude</label>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {lengths.map((len) => (
+                                <button
+                                    key={len.id}
+                                    onClick={() => onChange('storyLength', len.id)}
+                                    className={`relative p-4 border-4 rounded-2xl transition-all flex flex-col items-center gap-2 ${input.storyLength === len.id ? `${len.color} bg-white scale-105 shadow-[6px_6px_0px_currentColor]` : 'border-slate-100 opacity-40 hover:opacity-100'}`}
+                                >
+                                    <span className="text-3xl">{len.icon}</span>
+                                    <span className="font-comic uppercase text-lg">{len.label}</span>
+                                    <span className="text-[10px] font-black opacity-60">Estimated: {len.time}</span>
+                                    {input.storyLength === len.id && (
+                                        <motion.div layoutId="len-active" className="absolute -top-3 -right-3 bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center border-2 border-black">
+                                            ✓
+                                        </motion.div>
+                                    )}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
                     {/* Voice Selection */}
                     <div className="mt-12 pt-8 border-t-4 border-slate-100">
-                        <label className="font-comic text-gray-400 mb-6 block uppercase text-sm tracking-widest text-center">Voice Synthesis</label>
+                        <label className="font-comic text-gray-400 mb-8 block uppercase text-sm tracking-widest text-center">Narrator Spirit</label>
                         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                             {voices.map(voice => (
                                 <button
                                     key={voice.id}
                                     onClick={() => onChange('narratorVoice', voice.id)}
-                                    className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-4 transition-all ${input.narratorVoice === voice.id ? 'border-blue-500 bg-blue-50 text-blue-700 scale-105 shadow-md' : 'border-slate-100 text-slate-300 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 hover:border-blue-200'}`}
+                                    className={`flex flex-col items-center gap-2 p-4 rounded-3xl border-4 transition-all ${input.narratorVoice === voice.id ? 'border-blue-500 bg-blue-50 text-blue-700 scale-110 shadow-lg' : 'border-slate-50 bg-slate-50 text-slate-300 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 hover:border-blue-200'}`}
                                 >
-                                    <span className="text-3xl">{voice.icon}</span>
-                                    <span className="text-[10px] font-black uppercase truncate w-full text-center">{voice.id}</span>
+                                    <span className="text-5xl">{voice.icon}</span>
+                                    <span className="text-[10px] font-black uppercase truncate w-full text-center tracking-tighter">{voice.id}</span>
                                 </button>
                             ))}
                         </div>
@@ -283,7 +296,7 @@ export const Setup: React.FC<SetupProps> = ({
                         whileTap={{ scale: isReady && !isLoading && isOnline ? 0.98 : 1 }}
                         onClick={onLaunch}
                         disabled={!isReady || isLoading || !isOnline}
-                        className={`comic-btn w-full mt-12 text-3xl py-8 disabled:bg-slate-200 disabled:text-slate-400 disabled:border-slate-300 disabled:shadow-none transition-all shadow-[8px_8px_0px_rgba(0,0,0,1)] ${input.mode === 'sleep' ? 'bg-indigo-700 text-yellow-100 hover:bg-indigo-800' : 'bg-red-600 text-white hover:bg-red-500'}`}
+                        className={`comic-btn w-full mt-12 text-4xl py-10 disabled:bg-slate-200 disabled:text-slate-400 disabled:border-slate-300 disabled:shadow-none transition-all shadow-[8px_8px_0px_rgba(0,0,0,1)] ${input.mode === 'sleep' ? 'bg-indigo-700 text-yellow-100 hover:bg-indigo-800' : 'bg-red-600 text-white hover:bg-red-500'}`}
                     >
                         {!isOnline ? 'OFFLINE' : (isLoading ? 'CRAFTING TALE...' : (input.mode === 'sleep' ? 'START DREAMING' : 'BEGIN MISSION'))}
                     </motion.button>
@@ -294,36 +307,38 @@ export const Setup: React.FC<SetupProps> = ({
                     <div className="bg-slate-900 border-[6px] border-black p-6 shadow-[12px_12px_0px_rgba(0,0,0,1)] flex flex-col h-full min-h-[500px]">
                         <h3 className="font-comic text-2xl text-white mb-8 flex items-center justify-between">
                             <span className="flex items-center gap-3"><span className="text-4xl">🏺</span> Memory Jar</span>
-                            <span className="text-[10px] bg-blue-600 px-2 py-1 rounded font-sans uppercase">Offline</span>
                         </h3>
                         
                         <div className="flex-1 space-y-4 overflow-y-auto custom-scrollbar pr-2">
                             {history.length === 0 ? (
                                 <div className="text-center py-16 text-slate-500 italic opacity-50 border-4 border-dashed border-slate-800 rounded-3xl">
-                                    No memories captured...
+                                    Your jar is empty... brew a story to capture a memory!
                                 </div>
                             ) : (
                                 history.map((item) => (
                                     <motion.div
                                         key={item.id}
                                         whileHover={{ x: 6 }}
-                                        className="w-full bg-slate-800 border-4 border-black flex items-center p-0 group relative rounded-xl overflow-hidden shadow-[4px_4px_0px_black] hover:shadow-[6px_6px_0px_black] transition-all"
+                                        className="w-full bg-slate-800 border-4 border-black flex items-center p-0 group relative rounded-2xl overflow-hidden shadow-[4px_4px_0px_black] hover:shadow-[6px_6px_0px_black] transition-all"
                                     >
                                         <button 
                                             onClick={() => onLoadHistory(item)}
                                             className="flex-1 flex items-center gap-4 p-4 text-left"
                                         >
-                                            <div className="w-14 h-14 rounded-full border-4 border-black overflow-hidden bg-slate-700 flex-shrink-0 shadow-inner">
-                                                {item.avatar ? <img src={item.avatar} className="w-full h-full object-cover" /> : <span className="flex items-center justify-center h-full text-3xl">📘</span>}
+                                            <div className="w-16 h-16 rounded-full border-4 border-black overflow-hidden bg-slate-700 flex-shrink-0 shadow-inner">
+                                                {item.avatar ? <img src={item.avatar} className="w-full h-full object-cover" /> : <span className="flex items-center justify-center h-full text-4xl">📘</span>}
                                             </div>
                                             <div className="flex-1 overflow-hidden">
                                                 <p className="font-comic text-white truncate text-xl leading-none mb-1 uppercase tracking-tight">{item.story.title}</p>
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-[8px] text-blue-400 font-black uppercase opacity-60">
+                                                    <span className="text-[10px] text-blue-400 font-black uppercase opacity-60">
                                                         {new Date(item.timestamp).toLocaleDateString()}
                                                     </span>
                                                     <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
-                                                    <span className="text-[8px] text-green-400 font-black uppercase">Stored</span>
+                                                    {/* Visual indicator for offline availability */}
+                                                    <span className="flex items-center gap-1 text-[8px] bg-green-900/40 text-green-400 border border-green-500/20 px-1.5 py-0.5 rounded font-black uppercase tracking-widest">
+                                                        <span className="text-[12px]">💾</span> Local Ready
+                                                    </span>
                                                 </div>
                                             </div>
                                         </button>

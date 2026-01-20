@@ -42,7 +42,7 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
     const [currentStoryId, setCurrentStoryId] = useState<string | null>(null);
     const [currentPartIndex, setCurrentPartIndex] = useState(0);
     const [isNarrating, setIsNarrating] = useState(false);
-    const [isNarrationLoading, setIsNarrationLoading] = useState(false);
+    const [isNarrationLoading, setIsNarratingLoading] = useState(false);
 
     // Sync online status and load history
     useEffect(() => {
@@ -82,7 +82,7 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
         if (state.isPlaying) { narrationManager.pause(); return; }
 
         setIsNarrating(true);
-        setIsNarrationLoading(true);
+        setIsNarratingLoading(true);
         try {
             const currentPart = story.parts[currentPartIndex];
             const isLastPart = currentPartIndex === story.parts.length - 1;
@@ -90,13 +90,13 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
                 ? `${currentPart.text}. Today's lesson is: ${story.lesson}. Here is a joke: ${story.joke}. ${story.tomorrowHook}` 
                 : currentPart.text;
             
-            // Critical: Use the selected voice from input state
+            // Critical: Use the specific voice selected in Setup
             await narrationManager.fetchNarration(textToRead, input.narratorVoice);
         } catch (err) {
-            console.error("Narration error", err);
+            console.error("Narration failed", err);
             setIsNarrating(false);
         } finally {
-            setIsNarrationLoading(false);
+            setIsNarratingLoading(false);
         }
     }, [story, currentPartIndex, input.narratorVoice]);
 
@@ -120,7 +120,6 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
         if (input.mode === 'sleep' && phase === 'reading' && story) {
             // Wait a bit then play
             const timer = setTimeout(() => {
-                // Check if we are not already narrating to avoid double play
                  if (!narrationManager.state.isPlaying) {
                      playNarration();
                  }
@@ -131,7 +130,7 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
 
     const generateAvatar = useCallback(async () => {
         if (!isOnline) {
-            alert("✨ Halt, Hero! Creating a new visual requires a link to the Multiverse (Internet Connection). Please connect to Spark your Avatar!");
+            alert("✨ Halt Citizen! You must be connected to the Multiverse to spark a new Avatar.");
             return;
         }
         const name = input.mode === 'classic' ? input.heroName : (input.mode === 'sleep' ? input.heroName : input.madlibs.animal);
@@ -155,14 +154,13 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
 
     const generateStory = useCallback(async () => {
         if (!isOnline) {
-            alert("📜 The Memory Jar is full of past tales, but new adventures require a connection to the Infinite Library. Check your internet connection to brew a new magic story!");
+            alert("📜 The Memory Jar contains your past tales, but new adventures require a connection to the Infinite Library.");
             return;
         }
         if (!(await validateApiKey())) return;
         setIsLoading(true);
         try {
             const data = await AIClient.streamStory(input);
-            // Save to offline storage automatically
             const id = await storageManager.saveStory(data, input.heroAvatarUrl);
             setCurrentStoryId(id);
             
@@ -212,7 +210,6 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
         if (currentPartIndex < (story?.parts.length || 0) - 1) {
             setCurrentPartIndex(prev => prev + 1);
             soundManager.playPageTurn();
-            // Optional: restart narration if it was active
             if (isNarrating) setTimeout(() => playNarration(), 1200);
         }
     }, [story, currentPartIndex, isNarrating, playNarration, stopNarration]);

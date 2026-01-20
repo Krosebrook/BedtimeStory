@@ -37,7 +37,6 @@ interface ReadingViewProps {
  * - Parallax background layers reacting to scroll.
  * - Staggered text entry with blur effects.
  * - Audio progress ring with interactive media controls.
- * - NEW: Ambient soundscapes and Gamified "Badge" rewards.
  */
 export const ReadingView: React.FC<ReadingViewProps> = ({
     story,
@@ -63,19 +62,18 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
     const [fontSize, setFontSize] = useState<'normal' | 'large' | 'huge'>('normal');
     const scrollRef = useRef<HTMLDivElement>(null);
     
-    // Subtler parallax offsets to ensure readability
+    // Subtler parallax offsets to ensure readability and focus on content
     const { scrollYProgress } = useScroll({ container: scrollRef });
-    const y1 = useTransform(scrollYProgress, [0, 1], ['0%', '10%']);
-    const y2 = useTransform(scrollYProgress, [0, 1], ['0%', '-5%']);
-    const rotate1 = useTransform(scrollYProgress, [0, 1], [0, 12]);
-    const rotate2 = useTransform(scrollYProgress, [0, 1], [0, -12]);
+    const y1 = useTransform(scrollYProgress, [0, 1], ['0%', '5%']);
+    const y2 = useTransform(scrollYProgress, [0, 1], ['0%', '-3%']);
+    const rotate1 = useTransform(scrollYProgress, [0, 1], [0, 5]);
+    const rotate2 = useTransform(scrollYProgress, [0, 1], [0, -5]);
 
     const progressPercent = narrationDuration > 0 ? (narrationTime / narrationDuration) * 100 : 0;
 
     // Ambient Audio Logic
     useEffect(() => {
         if (!isMuted) {
-            // Determine ambient track based on setting/theme
             const text = (input.setting || input.sleepConfig.theme || '').toLowerCase();
             if (text.includes('rain') || text.includes('water') || text.includes('ocean')) {
                 soundManager.playAmbient('rain');
@@ -119,7 +117,6 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
         }
     };
 
-    // Color palette for choices to make them distinct
     const choiceColors = [
         'bg-yellow-400 hover:bg-yellow-300 text-black',
         'bg-blue-400 hover:bg-blue-300 text-black',
@@ -135,13 +132,11 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
             role="main"
             aria-label={`Reading story: ${story.title}`}
         >
-            {/* Top Toolbar */}
             <div className="absolute top-0 right-4 flex gap-4 z-[120]">
                 <button 
                     onClick={cycleFontSize}
                     className="bg-white/10 hover:bg-white/20 p-3 rounded-full border-2 border-white/20 backdrop-blur-md transition-all text-xl shadow-lg font-serif font-bold w-12 h-12 flex items-center justify-center text-white"
                     aria-label="Change font size"
-                    title="Change font size"
                 >
                     {fontSize === 'normal' ? 'T' : (fontSize === 'large' ? 'T+' : 'T++')}
                 </button>
@@ -158,7 +153,6 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                 ref={scrollRef}
                 className={`w-full h-full p-6 md:p-16 border-[8px] border-black shadow-[24px_24px_0px_rgba(0,0,0,1)] overflow-y-auto custom-scrollbar relative overflow-hidden rounded-sm transition-colors duration-1000 ${isSleepMode ? 'bg-indigo-950 text-indigo-100' : 'bg-[#fdf6e3] text-gray-900'}`}
             >
-                {/* Parallax Background Decorations */}
                 <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden opacity-25 select-none" aria-hidden="true">
                     <motion.div style={{ y: y1, rotate: rotate1 }} className={`absolute top-10 left-10 text-9xl ${isSleepMode ? 'text-white/20' : 'text-yellow-200/40'}`}>⭐</motion.div>
                     <motion.div style={{ y: y2, rotate: rotate2 }} className={`absolute top-40 right-20 text-9xl ${isSleepMode ? 'text-blue-300/20' : 'text-blue-200/40'}`}>🌙</motion.div>
@@ -166,8 +160,6 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                 </div>
 
                 <div className="max-w-prose mx-auto pb-48 relative z-10">
-                    
-                    {/* Story Title & Avatar Header */}
                     <motion.header 
                         initial={{ y: -40, opacity: 0, filter: 'blur(8px)' }}
                         animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
@@ -188,7 +180,6 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                         <div className="h-1.5 w-32 bg-red-600 mt-6 rounded-full shadow-sm"></div>
                     </motion.header>
                     
-                    {/* Dynamic Story Parts */}
                     <article className="space-y-20">
                         {story.parts.slice(0, currentPartIndex + 1).map((part, i) => (
                             <motion.section 
@@ -198,7 +189,6 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                                 transition={{ duration: 0.9, ease: [0.19, 1, 0.22, 1] }}
                                 className={`${getFontSizeClass()} relative ${isSleepMode ? 'text-indigo-100 font-serif' : ''}`}
                             >
-                                {/* Part Indicator */}
                                 <div className={`absolute -left-12 -top-6 text-7xl opacity-[0.05] font-comic -z-10 select-none ${isSleepMode ? 'text-white' : 'text-black'}`} aria-hidden="true">
                                     {i + 1}
                                 </div>
@@ -210,7 +200,6 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                                     duration={narrationDuration} 
                                 />
                                 
-                                {/* Branching Choice Points */}
                                 {i === currentPartIndex && part.choices && part.choices.length > 0 && !isSleepMode && (
                                     <motion.div 
                                         initial={{ opacity: 0, y: 20 }}
@@ -250,7 +239,6 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                             </motion.section>
                         ))}
 
-                        {/* Story Conclusion & Education Blocks */}
                         {currentPartIndex === story.parts.length - 1 && (
                             <motion.footer 
                                 initial={{ opacity: 0, y: 100 }}
@@ -258,7 +246,6 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                                 transition={{ duration: 1.2, delay: 0.3 }}
                                 className={`mt-24 pt-16 border-t-[8px] border-double space-y-12 ${isSleepMode ? 'border-indigo-800' : 'border-black'}`}
                             >
-                                {/* REWARD BADGE - GAMIFICATION HOOK */}
                                 {story.rewardBadge && (
                                     <motion.div 
                                         initial={{ scale: 0.5, opacity: 0 }}
@@ -331,7 +318,6 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                     </article>
                 </div>
 
-                {/* Fixed Storyteller HUD */}
                 <motion.nav 
                     layout
                     className={`absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-6 md:gap-10 border-[6px] border-black p-4 md:p-6 px-8 md:px-14 shadow-[20px_20px_0px_rgba(0,0,0,1)] z-[130] min-w-[320px] md:min-w-[420px] rounded-sm ${isSleepMode ? 'bg-indigo-900 text-white shadow-black' : 'bg-white text-black'}`}
@@ -372,7 +358,6 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                                 <button 
                                     onClick={onTogglePlayback}
                                     className="relative text-6xl md:text-7xl hover:scale-110 transition-transform active:scale-90 z-10"
-                                    aria-label={narrationManager.state.isPlaying ? "Pause storytelling" : "Start storytelling"}
                                 >
                                     {narrationManager.state.isPlaying ? '⏸️' : '▶️'}
                                 </button>
@@ -381,7 +366,6 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                             <button 
                                 onClick={onStopNarration}
                                 className="text-5xl md:text-6xl opacity-30 hover:opacity-100 transition-all hover:scale-110 active:scale-90"
-                                title="Reset Narrator"
                             >
                                 ⏹️
                             </button>
