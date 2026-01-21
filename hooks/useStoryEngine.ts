@@ -130,7 +130,7 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
 
     const generateAvatar = useCallback(async () => {
         if (!isOnline) {
-            alert("✨ Halt, Hero! Creating a new visual requires a link to the Multiverse (Internet Connection). Please connect to Spark your Avatar!");
+            alert("✨ Halt Citizen! You must be connected to the Multiverse to spark a new Avatar.");
             return;
         }
         const name = input.mode === 'classic' ? input.heroName : (input.mode === 'sleep' ? input.heroName : input.madlibs.animal);
@@ -154,7 +154,7 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
 
     const generateStory = useCallback(async () => {
         if (!isOnline) {
-            alert("📜 The Memory Jar is full of past tales, but new adventures require a connection to the Infinite Library. Check your internet connection to brew a new magic story!");
+            alert("📜 The Memory Jar contains your past tales, but new adventures require a connection to the Infinite Library.");
             return;
         }
         if (!(await validateApiKey())) return;

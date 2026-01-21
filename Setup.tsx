@@ -40,10 +40,10 @@ export const Setup: React.FC<SetupProps> = ({
     const isReady = input.mode === 'madlibs' ? isMadLibReady : (input.mode === 'sleep' ? isSleepReady : isClassicReady);
 
     const sleepThemes = [
-        { name: 'Cloud Kingdom', icon: '☁️', color: 'bg-blue-100', accent: 'border-blue-300' },
-        { name: 'Starry Space', icon: '✨', color: 'bg-indigo-200', accent: 'border-indigo-400' },
-        { name: 'Deep Ocean', icon: '🌊', color: 'bg-cyan-100', accent: 'border-cyan-300' },
-        { name: 'Magic Forest', icon: '🌲', color: 'bg-emerald-100', accent: 'border-emerald-300' }
+        { name: 'Cloud Kingdom', icon: '☁️', color: 'bg-blue-100', accent: 'border-blue-400' },
+        { name: 'Starry Space', icon: '✨', color: 'bg-indigo-100', accent: 'border-indigo-400' },
+        { name: 'Deep Ocean', icon: '🌊', color: 'bg-cyan-100', accent: 'border-cyan-400' },
+        { name: 'Magic Forest', icon: '🌲', color: 'bg-emerald-100', accent: 'border-emerald-400' }
     ];
 
     const voices = [
@@ -97,16 +97,16 @@ export const Setup: React.FC<SetupProps> = ({
                     layout
                     className="lg:col-span-2 bg-white border-[6px] border-black shadow-[16px_16px_0px_rgba(30,58,138,0.5)] p-8 md:p-12 relative z-20 overflow-hidden"
                 >
-                    {/* Local Loading Overlay */}
+                    {/* engaging loading state overlay */}
                     <AnimatePresence>
                         {isLoading && (
                             <motion.div 
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="absolute inset-0 z-[100]"
+                                className="absolute inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center text-center"
                             >
-                                <LoadingFX embedded />
+                                <LoadingFX />
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -152,26 +152,26 @@ export const Setup: React.FC<SetupProps> = ({
                             <motion.div key="classic" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-1">
-                                        <label className="font-comic text-blue-700 uppercase text-xs tracking-widest">Hero Name</label>
-                                        <input value={input.heroName} onChange={e => onChange('heroName', e.target.value)} placeholder="e.g. Captain Cosmic" className="w-full border-4 border-black p-4 text-xl" />
+                                        <label className="font-comic text-blue-700 text-sm uppercase">Hero Name</label>
+                                        <input value={input.heroName} onChange={e => onChange('heroName', e.target.value)} placeholder="e.g. Captain Cosmic" className="w-full border-4 border-black p-3 text-lg" />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="font-comic text-red-600 uppercase text-xs tracking-widest">Super Power</label>
-                                        <input value={input.heroPower} onChange={e => onChange('heroPower', e.target.value)} placeholder="e.g. Flight" className="w-full border-4 border-black p-4 text-xl" />
+                                        <label className="font-comic text-red-600 text-sm uppercase">Super Power</label>
+                                        <input value={input.heroPower} onChange={e => onChange('heroPower', e.target.value)} placeholder="e.g. Flight" className="w-full border-4 border-black p-3 text-lg" />
                                     </div>
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="font-comic text-purple-700 uppercase text-xs tracking-widest">Setting</label>
-                                    <input value={input.setting} onChange={e => onChange('setting', e.target.value)} placeholder="e.g. Floating Island" className="w-full border-4 border-black p-4 text-xl" />
+                                    <label className="font-comic text-purple-700 text-sm uppercase">Setting</label>
+                                    <input value={input.setting} onChange={e => onChange('setting', e.target.value)} placeholder="e.g. Floating Island" className="w-full border-4 border-black p-3 text-lg" />
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-1">
-                                        <label className="font-comic text-green-700 uppercase text-xs tracking-widest">Sidekick</label>
-                                        <input value={input.sidekick} onChange={e => onChange('sidekick', e.target.value)} placeholder="e.g. Robotic Owl" className="w-full border-4 border-black p-4 text-xl" />
+                                        <label className="font-comic text-green-700 text-sm uppercase">Sidekick</label>
+                                        <input value={input.sidekick} onChange={e => onChange('sidekick', e.target.value)} placeholder="e.g. Robotic Owl" className="w-full border-4 border-black p-3 text-lg" />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="font-comic text-orange-600 uppercase text-xs tracking-widest">Trouble</label>
-                                        <input value={input.problem} onChange={e => onChange('problem', e.target.value)} placeholder="e.g. Stolen Sun" className="w-full border-4 border-black p-4 text-xl" />
+                                        <label className="font-comic text-orange-600 text-sm uppercase">Trouble</label>
+                                        <input value={input.problem} onChange={e => onChange('problem', e.target.value)} placeholder="e.g. Stolen Sun" className="w-full border-4 border-black p-3 text-lg" />
                                     </div>
                                 </div>
                             </motion.div>
@@ -197,51 +197,51 @@ export const Setup: React.FC<SetupProps> = ({
 
                                 <div className="space-y-6">
                                      <div className="space-y-1">
-                                        <label className="font-comic text-indigo-700 text-xl uppercase tracking-widest">Hero Name</label>
-                                        <input value={input.heroName} onChange={e => onChange('heroName', e.target.value)} placeholder="Who is going to sleep?" className="w-full border-4 border-indigo-200 p-5 focus:border-indigo-500 outline-none text-2xl shadow-inner" />
+                                        <label className="font-comic text-indigo-700 text-xl">Sleepy Hero</label>
+                                        <input value={input.heroName} onChange={e => onChange('heroName', e.target.value)} placeholder="Who is going to sleep?" className="w-full border-4 border-indigo-200 p-4 focus:border-indigo-500 outline-none text-xl" />
                                     </div>
                                 
                                     {input.sleepConfig.subMode === 'automatic' && (
-                                        <div className="bg-indigo-50/50 p-8 border-4 border-dashed border-indigo-100 rounded-3xl">
-                                            <label className="font-comic text-indigo-700 uppercase text-xs tracking-widest">Setting (Optional)</label>
-                                            <input value={input.setting} onChange={e => onChange('setting', e.target.value)} placeholder="e.g. A Fluffy Cloud" className="w-full border-2 border-indigo-200 p-4 mt-2 focus:border-indigo-400 outline-none text-xl" />
-                                            <p className="text-sm text-indigo-400 mt-6 italic text-center">The Multiverse will weave a completely original, whisper-soft environment for you.</p>
+                                        <div className="bg-indigo-50/50 p-6 border-4 border-dashed border-indigo-100 rounded-2xl">
+                                            <label className="font-comic text-indigo-700">Setting (Optional)</label>
+                                            <input value={input.setting} onChange={e => onChange('setting', e.target.value)} placeholder="e.g. A Fluffy Cloud" className="w-full border-2 border-indigo-200 p-3 mt-2 focus:border-indigo-400 outline-none" />
+                                            <p className="text-sm text-indigo-400 mt-4 italic">The Multiverse will weave a completely original, whisper-soft environment for you.</p>
                                         </div>
                                     )}
 
                                     {input.sleepConfig.subMode === 'parent-madlib' && (
-                                        <div className="space-y-6 bg-indigo-50/80 p-8 border-4 border-indigo-200 rounded-3xl shadow-[inset_0px_2px_4px_rgba(0,0,0,0.05)]">
-                                            <h4 className="font-comic text-indigo-800 text-xl uppercase tracking-widest mb-2 text-center underline decoration-indigo-200 underline-offset-8">Sensory Touchpoints</h4>
-                                            <p className="text-xs text-indigo-400 text-center mb-8 italic">Add real things your child can experience now to anchor them in the story.</p>
-                                            <div className="grid grid-cols-1 gap-8">
+                                        <div className="space-y-6 bg-indigo-50/80 p-6 border-4 border-indigo-200 rounded-3xl shadow-inner">
+                                            <h4 className="font-comic text-indigo-800 text-xl uppercase tracking-widest mb-4 text-center">Guided Sensory Elements</h4>
+                                            <div className="grid grid-cols-1 gap-6">
                                                 <div className="relative group">
-                                                    <span className="absolute -top-3 left-4 bg-white border border-indigo-200 px-2 text-[10px] font-black uppercase text-indigo-600 rounded-full z-10 transition-transform group-focus-within:-translate-y-1">A Soft Texture</span>
-                                                    <input value={input.sleepConfig.texture} onChange={e => handleSleepConfigChange('texture', e.target.value)} placeholder="e.g. Fluffy Silk Blanket" className="w-full border-4 border-indigo-100 bg-white p-5 pt-6 rounded-2xl focus:border-indigo-500 focus:bg-white outline-none text-xl transition-all shadow-sm" />
+                                                    <span className="absolute -top-3 left-4 bg-white px-2 text-[10px] font-black uppercase text-indigo-500 border border-indigo-200 rounded-full">A Soft Texture</span>
+                                                    <input value={input.sleepConfig.texture} onChange={e => handleSleepConfigChange('texture', e.target.value)} placeholder="e.g. Silk Blanket" className="w-full border-4 border-indigo-100 bg-white p-4 pt-5 rounded-2xl focus:border-indigo-500 outline-none text-lg transition-all" />
                                                 </div>
                                                 <div className="relative group">
-                                                    <span className="absolute -top-3 left-4 bg-white border border-indigo-200 px-2 text-[10px] font-black uppercase text-indigo-600 rounded-full z-10 transition-transform group-focus-within:-translate-y-1">A Gentle Sound</span>
-                                                    <input value={input.sleepConfig.sound} onChange={e => handleSleepConfigChange('sound', e.target.value)} placeholder="e.g. Soft Hum of a Fan" className="w-full border-4 border-indigo-100 bg-white p-5 pt-6 rounded-2xl focus:border-indigo-500 focus:bg-white outline-none text-xl transition-all shadow-sm" />
+                                                    <span className="absolute -top-3 left-4 bg-white px-2 text-[10px] font-black uppercase text-indigo-500 border border-indigo-200 rounded-full">A Gentle Sound</span>
+                                                    <input value={input.sleepConfig.sound} onChange={e => handleSleepConfigChange('sound', e.target.value)} placeholder="e.g. Soft Hum" className="w-full border-4 border-indigo-100 bg-white p-4 pt-5 rounded-2xl focus:border-indigo-500 outline-none text-lg transition-all" />
                                                 </div>
                                                 <div className="relative group">
-                                                    <span className="absolute -top-3 left-4 bg-white border border-indigo-200 px-2 text-[10px] font-black uppercase text-indigo-600 rounded-full z-10 transition-transform group-focus-within:-translate-y-1">A Cozy Scent</span>
-                                                    <input value={input.sleepConfig.scent} onChange={e => handleSleepConfigChange('scent', e.target.value)} placeholder="e.g. Fresh Lavender" className="w-full border-4 border-indigo-100 bg-white p-5 pt-6 rounded-2xl focus:border-indigo-500 focus:bg-white outline-none text-xl transition-all shadow-sm" />
+                                                    <span className="absolute -top-3 left-4 bg-white px-2 text-[10px] font-black uppercase text-indigo-500 border border-indigo-200 rounded-full">A Cozy Scent</span>
+                                                    <input value={input.sleepConfig.scent} onChange={e => handleSleepConfigChange('scent', e.target.value)} placeholder="e.g. Lavender" className="w-full border-4 border-indigo-100 bg-white p-4 pt-5 rounded-2xl focus:border-indigo-500 outline-none text-lg transition-all" />
                                                 </div>
                                             </div>
+                                            <p className="text-xs text-indigo-400 italic mt-2 text-center">Add things your child can experience now to ground them in the magic.</p>
                                         </div>
                                     )}
 
                                     {input.sleepConfig.subMode === 'child-friendly' && (
-                                        <div className="grid grid-cols-2 gap-6">
+                                        <div className="grid grid-cols-2 gap-4">
                                             {sleepThemes.map(theme => (
                                                 <motion.button 
                                                     key={theme.name}
-                                                    whileHover={{ scale: 1.05, y: -4 }}
+                                                    whileHover={{ scale: 1.05 }}
                                                     whileTap={{ scale: 0.95 }}
                                                     onClick={() => handleSleepConfigChange('theme', theme.name)}
-                                                    className={`p-8 border-4 rounded-[2.5rem] flex flex-col items-center gap-4 transition-all shadow-md ${input.sleepConfig.theme === theme.name ? `border-indigo-600 ${theme.color} shadow-[8px_8px_0px_rgba(49,46,129,0.3)]` : 'border-slate-100 bg-white opacity-40 hover:opacity-100'}`}
+                                                    className={`p-6 border-4 rounded-[2rem] flex flex-col items-center gap-3 transition-all ${input.sleepConfig.theme === theme.name ? `border-indigo-600 ${theme.color} shadow-[8px_8px_0px_rgba(49,46,129,0.3)]` : 'border-slate-50 bg-slate-50 opacity-40 hover:opacity-100'}`}
                                                 >
-                                                    <span className="text-7xl drop-shadow-md">{theme.icon}</span>
-                                                    <span className="font-comic text-indigo-900 text-xl uppercase tracking-tighter">{theme.name}</span>
+                                                    <span className="text-6xl drop-shadow-sm">{theme.icon}</span>
+                                                    <span className="font-comic text-indigo-900 text-lg uppercase tracking-tight">{theme.name}</span>
                                                 </motion.button>
                                             ))}
                                         </div>
@@ -252,21 +252,21 @@ export const Setup: React.FC<SetupProps> = ({
                     </AnimatePresence>
                     
                     {/* Story Length Selection */}
-                    <div className="mt-12 pt-10 border-t-4 border-slate-100">
-                        <label className="font-comic text-gray-400 mb-8 block uppercase text-sm tracking-widest text-center">Tale Size</label>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="mt-12 pt-8 border-t-4 border-slate-100">
+                        <label className="font-comic text-gray-400 mb-6 block uppercase text-sm tracking-widest text-center">Tale Magnitude</label>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {lengths.map((len) => (
                                 <button
                                     key={len.id}
                                     onClick={() => onChange('storyLength', len.id)}
-                                    className={`relative p-5 border-4 rounded-[2rem] transition-all flex flex-col items-center gap-2 ${input.storyLength === len.id ? `${len.color} bg-white scale-105 shadow-[8px_8px_0px_currentColor]` : 'border-slate-50 bg-slate-50 opacity-40 hover:opacity-100'}`}
+                                    className={`relative p-4 border-4 rounded-2xl transition-all flex flex-col items-center gap-2 ${input.storyLength === len.id ? `${len.color} bg-white scale-105 shadow-[6px_6px_0px_currentColor]` : 'border-slate-100 opacity-40 hover:opacity-100'}`}
                                 >
-                                    <span className="text-4xl mb-1">{len.icon}</span>
-                                    <span className="font-comic uppercase text-xl leading-none">{len.label}</span>
-                                    <span className="text-[10px] font-black opacity-60 tracking-widest mt-1">~{len.time} READ</span>
+                                    <span className="text-3xl">{len.icon}</span>
+                                    <span className="font-comic uppercase text-lg">{len.label}</span>
+                                    <span className="text-[10px] font-black opacity-60">Estimated: {len.time}</span>
                                     {input.storyLength === len.id && (
-                                        <motion.div layoutId="len-active" className="absolute -top-3 -right-3 bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center border-4 border-black shadow-sm">
-                                            <span className="text-xl">✓</span>
+                                        <motion.div layoutId="len-active" className="absolute -top-3 -right-3 bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center border-2 border-black">
+                                            ✓
                                         </motion.div>
                                     )}
                                 </button>
@@ -275,14 +275,14 @@ export const Setup: React.FC<SetupProps> = ({
                     </div>
 
                     {/* Voice Selection */}
-                    <div className="mt-12 pt-10 border-t-4 border-slate-100">
-                        <label className="font-comic text-gray-400 mb-8 block uppercase text-sm tracking-widest text-center">Narrator Voice</label>
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div className="mt-12 pt-8 border-t-4 border-slate-100">
+                        <label className="font-comic text-gray-400 mb-8 block uppercase text-sm tracking-widest text-center">Narrator Spirit</label>
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                             {voices.map(voice => (
                                 <button
                                     key={voice.id}
                                     onClick={() => onChange('narratorVoice', voice.id)}
-                                    className={`flex flex-col items-center gap-3 p-5 rounded-[2rem] border-4 transition-all ${input.narratorVoice === voice.id ? 'border-blue-500 bg-blue-50 text-blue-700 scale-110 shadow-lg' : 'border-slate-50 bg-slate-50 text-slate-300 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 hover:border-blue-200'}`}
+                                    className={`flex flex-col items-center gap-2 p-4 rounded-3xl border-4 transition-all ${input.narratorVoice === voice.id ? 'border-blue-500 bg-blue-50 text-blue-700 scale-110 shadow-lg' : 'border-slate-50 bg-slate-50 text-slate-300 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 hover:border-blue-200'}`}
                                 >
                                     <span className="text-5xl">{voice.icon}</span>
                                     <span className="text-[10px] font-black uppercase truncate w-full text-center tracking-tighter">{voice.id}</span>
@@ -296,7 +296,7 @@ export const Setup: React.FC<SetupProps> = ({
                         whileTap={{ scale: isReady && !isLoading && isOnline ? 0.98 : 1 }}
                         onClick={onLaunch}
                         disabled={!isReady || isLoading || !isOnline}
-                        className={`comic-btn w-full mt-16 text-4xl py-10 disabled:bg-slate-200 disabled:text-slate-400 disabled:border-slate-300 disabled:shadow-none transition-all shadow-[12px_12px_0px_rgba(0,0,0,1)] ${input.mode === 'sleep' ? 'bg-indigo-700 text-yellow-100 hover:bg-indigo-800' : 'bg-red-600 text-white hover:bg-red-500'}`}
+                        className={`comic-btn w-full mt-12 text-4xl py-10 disabled:bg-slate-200 disabled:text-slate-400 disabled:border-slate-300 disabled:shadow-none transition-all shadow-[8px_8px_0px_rgba(0,0,0,1)] ${input.mode === 'sleep' ? 'bg-indigo-700 text-yellow-100 hover:bg-indigo-800' : 'bg-red-600 text-white hover:bg-red-500'}`}
                     >
                         {!isOnline ? 'OFFLINE' : (isLoading ? 'CRAFTING TALE...' : (input.mode === 'sleep' ? 'START DREAMING' : 'BEGIN MISSION'))}
                     </motion.button>
@@ -335,8 +335,9 @@ export const Setup: React.FC<SetupProps> = ({
                                                         {new Date(item.timestamp).toLocaleDateString()}
                                                     </span>
                                                     <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
+                                                    {/* Visual indicator for offline availability */}
                                                     <span className="flex items-center gap-1 text-[8px] bg-green-900/40 text-green-400 border border-green-500/20 px-1.5 py-0.5 rounded font-black uppercase tracking-widest">
-                                                        <span className="text-[12px]">💾</span> Local Story
+                                                        <span className="text-[12px]">💾</span> Local Ready
                                                     </span>
                                                 </div>
                                             </div>
