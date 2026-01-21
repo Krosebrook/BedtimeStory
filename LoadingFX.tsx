@@ -8,7 +8,11 @@ import React, { useState, useEffect } from 'react';
 
 const BEDTIME_WORDS = ["DREAM!", "WISH!", "MAGIC!", "GLOW!", "SHINE!", "SOFT!", "SLEEP!", "STORY!"];
 
-export const LoadingFX: React.FC = () => {
+interface LoadingFXProps {
+    embedded?: boolean;
+}
+
+export const LoadingFX: React.FC<LoadingFXProps> = ({ embedded = false }) => {
     const [particles, setParticles] = useState<{id: number, text: string, x: string, y: string, rot: number, color: string}[]>([]);
     
     useEffect(() => {
@@ -26,7 +30,7 @@ export const LoadingFX: React.FC = () => {
     }, []);
 
     return (
-        <div className="fixed inset-0 z-[300] bg-slate-950 flex flex-col items-center justify-center overflow-hidden">
+        <div className={`${embedded ? 'absolute' : 'fixed'} inset-0 z-[300] bg-slate-950 flex flex-col items-center justify-center overflow-hidden`}>
             <style>{`
               @keyframes magic-sparkle {
                   0% { transform: translate(-50%, -50%) scale(0.5) rotate(var(--rot)); opacity: 0; filter: blur(5px); }
@@ -62,16 +66,16 @@ export const LoadingFX: React.FC = () => {
                 />
             ))}
 
-            <div className="relative z-10 text-center flex flex-col items-center">
-                <div className="w-32 h-32 mb-8 relative">
+            <div className="relative z-10 text-center flex flex-col items-center p-4">
+                <div className="w-24 h-24 md:w-32 md:h-32 mb-8 relative">
                     <div className="absolute inset-0 bg-yellow-400 rounded-full blur-2xl opacity-20 animate-pulse"></div>
-                    <span className="text-8xl animate-bounce inline-block">📖</span>
+                    <span className="text-6xl md:text-8xl animate-bounce inline-block">📖</span>
                 </div>
                 
-                <h2 className="font-comic text-5xl text-blue-300 mb-4 tracking-widest animate-pulse" style={{textShadow: '0 0 20px rgba(147,197,253,0.5)'}}>
+                <h2 className="font-comic text-4xl md:text-5xl text-blue-300 mb-4 tracking-widest animate-pulse" style={{textShadow: '0 0 20px rgba(147,197,253,0.5)'}}>
                     Gathering Stardust...
                 </h2>
-                <p className="font-serif text-xl text-slate-400 italic">
+                <p className="font-serif text-lg md:text-xl text-slate-400 italic">
                     Imagining a world of wonders just for you.
                 </p>
             </div>

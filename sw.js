@@ -1,5 +1,5 @@
 
-const CACHE_NAME = 'bedtime-chronicles-v2';
+const CACHE_NAME = 'bedtime-chronicles-v3';
 const urlsToCache = [
   '/',
   '/index.html',

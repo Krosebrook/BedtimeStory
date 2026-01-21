@@ -75,7 +75,6 @@ const App: React.FC = () => {
 
             <AnimatePresence>
                 {showApiKeyDialog && <ApiKeyDialog onContinue={handleApiKeyDialogContinue} />}
-                {isLoading && <LoadingFX key="loading" />}
             </AnimatePresence>
             
             <Suspense fallback={<LoadingFX />}>

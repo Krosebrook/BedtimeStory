@@ -32,16 +32,16 @@ export class AIClient {
             lengthInstructions = `
             LENGTH: Short & Punchy. 
             WORD COUNT: Aim for approx 300 words total across all parts.
-            PACING: Fast and active.
-            COMPLEXITY: Simple, direct narrative focusing on a single magical moment or lesson.
+            PACING: Fast. Get straight to the heart of the adventure.
+            COMPLEXITY: Simple, direct narrative focusing on a single magical moment.
             `;
             break;
         case 'long':
             lengthInstructions = `
             LENGTH: Epic Saga. 
             WORD COUNT: Aim for approx 1500-2000 words total. 
-            PACING: Deliberate and rich. Take time to describe sounds, textures, and internal character thoughts.
-            COMPLEXITY: High. Intricate world-building and character growth.
+            PACING: Deliberate and rich. Take time to describe the environment, the sounds, the smells, and the internal feelings of the characters.
+            COMPLEXITY: High. Multiple character interactions, intricate world-building, and a deeply satisfying narrative arc.
             `;
             break;
         case 'medium':
@@ -49,8 +49,8 @@ export class AIClient {
             lengthInstructions = `
             LENGTH: Standard Storybook. 
             WORD COUNT: Aim for approx 800 words total.
-            PACING: Balanced.
-            COMPLEXITY: Moderate. Room for imagination while keeping the plot clear.
+            PACING: Balanced. Enough detail to be immersive but remains focused on the plot.
+            COMPLEXITY: Moderate. A clear beginning, middle, and end with room for imagination.
             `;
             break;
     }
@@ -109,6 +109,7 @@ export class AIClient {
         CHOICE GUIDELINES (Ensure variety): 
         - Choices must represent distinct paths (e.g., Brave Action, Clever Trick, Kind Word, or Wild Idea).
         - They should feel like they genuinely impact the narrative direction.
+        - Encourage branching possibilities.
         
         Tone: "Storybook Magic".
         ${lengthInstructions}
@@ -129,7 +130,9 @@ export class AIClient {
         1. ${lengthInstructions}
         2. Divide the story into 3 chunky parts. 
         3. The tone should be hilarious yet cozy.
-        4. Provide exactly 3 or 4 distinct choices at the end of Part 1 and 2.
+        4. Use the Silly Word frequently as a magic incantation or the name of a legendary item.
+        5. The climax must involve the ${food} in a surprising way.
+        6. Provide exactly 3 or 4 distinct choices at the end of Part 1 and 2. Make them silly, specific, and absurd!
       `;
     }
 
@@ -144,6 +147,7 @@ export class AIClient {
       rewardBadge ({emoji, title, description}).
       No markdown backticks.
       IMPORTANT: For sleep mode, 'choices' array must be empty or null.
+      rewardBadge should be a fun achievement based on the story content (e.g. "Golden Feather").
     `;
 
     const result = await ai.models.generateContent({
