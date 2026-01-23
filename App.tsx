@@ -12,6 +12,7 @@ import { soundManager } from './SoundManager';
 import { useApiKey } from './useApiKey';
 import { useStoryEngine } from './hooks/useStoryEngine';
 import { useNarrationSync } from './hooks/useNarrationSync';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Lazy load main views for better initial chunking
 const Setup = lazy(() => import('./Setup').then(m => ({ default: m.Setup })));
@@ -31,9 +32,11 @@ const App: React.FC = () => {
         phase,
         isLoading,
         isAvatarLoading,
+        isSceneLoading,
         input,
         story,
         currentPartIndex,
+        scenes,
         isNarrating,
         isNarrationLoading,
         isOnline,
@@ -43,6 +46,9 @@ const App: React.FC = () => {
         handleSleepConfigChange,
         generateAvatar,
         generateStory,
+        generateCurrentScene,
+        generateScene,
+        prepareSequel,
         handleChoice,
         reset,
         playNarration,
@@ -79,40 +85,49 @@ const App: React.FC = () => {
             
             <Suspense fallback={<LoadingFX />}>
                 {phase === 'setup' && (
-                    <Setup 
-                        input={input} 
-                        onChange={handleInputChange} 
-                        onLaunch={generateStory} 
-                        onGenerateAvatar={generateAvatar}
-                        isLoading={isLoading} 
-                        isAvatarLoading={isAvatarLoading}
-                        isOnline={isOnline}
-                        history={history}
-                        onLoadHistory={loadStoryFromHistory}
-                        handleSleepConfigChange={handleSleepConfigChange}
-                        onDeleteHistory={deleteStory}
-                    />
+                    <ErrorBoundary>
+                        <Setup 
+                            input={input} 
+                            onChange={handleInputChange} 
+                            onLaunch={generateStory} 
+                            onGenerateAvatar={generateAvatar}
+                            isLoading={isLoading} 
+                            isAvatarLoading={isAvatarLoading}
+                            isOnline={isOnline}
+                            history={history}
+                            onLoadHistory={loadStoryFromHistory}
+                            handleSleepConfigChange={handleSleepConfigChange}
+                            onDeleteHistory={deleteStory}
+                            onPrepareSequel={prepareSequel}
+                        />
+                    </ErrorBoundary>
                 )}
 
                 {phase === 'reading' && story && (
-                    <ReadingView 
-                        story={story}
-                        input={input}
-                        currentPartIndex={currentPartIndex}
-                        narrationTime={narrationTime}
-                        narrationDuration={narrationDuration}
-                        isNarrating={isNarrating}
-                        isNarrationLoading={isNarrationLoading}
-                        onTogglePlayback={playNarration}
-                        onStopNarration={stopNarration}
-                        onChoice={handleChoice}
-                        onReset={reset}
-                        toggleMute={toggleMute}
-                        isMuted={isMuted}
-                        playbackRate={playbackRate}
-                        setPlaybackRate={setPlaybackRate}
-                        onSubmitFeedback={submitFeedback}
-                    />
+                    <ErrorBoundary>
+                        <ReadingView 
+                            story={story}
+                            input={input}
+                            currentPartIndex={currentPartIndex}
+                            narrationTime={narrationTime}
+                            narrationDuration={narrationDuration}
+                            isNarrating={isNarrating}
+                            isNarrationLoading={isNarrationLoading}
+                            scenes={scenes}
+                            isSceneLoading={isSceneLoading}
+                            onGenerateScene={generateCurrentScene}
+                            onGenerateSceneIndex={generateScene}
+                            onTogglePlayback={playNarration}
+                            onStopNarration={stopNarration}
+                            onChoice={handleChoice}
+                            onReset={reset}
+                            toggleMute={toggleMute}
+                            isMuted={isMuted}
+                            playbackRate={playbackRate}
+                            setPlaybackRate={setPlaybackRate}
+                            onSubmitFeedback={submitFeedback}
+                        />
+                    </ErrorBoundary>
                 )}
             </Suspense>
         </div>

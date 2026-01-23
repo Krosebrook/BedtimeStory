@@ -16,6 +16,8 @@ export interface CachedStory {
   timestamp: number;
   story: StoryFull;
   avatar?: string;
+  // Map of partIndex to base64 image string
+  scenes?: Record<number, string>;
   feedback?: {
       rating: number;
       text: string;
@@ -67,7 +69,8 @@ class StorageManager {
       id,
       timestamp: Date.now(),
       story,
-      avatar
+      avatar,
+      scenes: {}
     };
 
     return new Promise((resolve, reject) => {
@@ -76,6 +79,30 @@ class StorageManager {
       const request = store.add(entry);
       request.onsuccess = () => resolve(id);
       request.onerror = () => reject(request.error);
+    });
+  }
+
+  async saveStoryScene(id: string, partIndex: number, image: string): Promise<void> {
+    await this.init();
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([STORE_NAME_STORIES], 'readwrite');
+      const store = transaction.objectStore(STORE_NAME_STORIES);
+      const getReq = store.get(id);
+
+      getReq.onsuccess = () => {
+        const data = getReq.result as CachedStory;
+        if (data) {
+          if (!data.scenes) data.scenes = {};
+          data.scenes[partIndex] = image;
+          
+          const putReq = store.put(data);
+          putReq.onsuccess = () => resolve();
+          putReq.onerror = () => reject(putReq.error);
+        } else {
+          reject(new Error("Story not found for scene update"));
+        }
+      };
+      getReq.onerror = () => reject(getReq.error);
     });
   }
 

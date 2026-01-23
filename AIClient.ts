@@ -55,6 +55,22 @@ export class AIClient {
             break;
     }
 
+    let sequelInstructions = "";
+    if (input.sequelContext) {
+        sequelInstructions = `
+        SEQUEL MODE ACTIVE:
+        This story is a direct sequel to a previous adventure titled "${input.sequelContext.lastTitle}".
+        
+        Previous Context/Cliffhanger: "${input.sequelContext.lastHook}".
+        Previous Lesson: "${input.sequelContext.lastLesson || ''}".
+        
+        Requirements:
+        1. Acknowledge the events of the previous story briefly in the intro.
+        2. Maintain strict character continuity for ${input.heroName}.
+        3. Present a NEW adventure/conflict (do not retell the old one).
+        `;
+    }
+
     let prompt = "";
     // Construct prompt based on mode
     if (input.mode === 'sleep') {
@@ -91,6 +107,7 @@ export class AIClient {
         Create a VERY soothing, linear bedtime story designed to help a child fall asleep.
         HERO: ${input.heroName}.
         ${sleepContext}
+        ${sequelInstructions}
         
         GENERAL SLEEP RULES:
         1. No conflicts, no scares, just gentle exploration and relaxation.
@@ -103,6 +120,7 @@ export class AIClient {
       prompt = `
         Create a warm, imaginative bedtime story for a child aged 6-10.
         HERO: ${input.heroName}, POWER: ${input.heroPower}, WORLD: ${input.setting}, COMPANION: ${input.sidekick}, CONFLICT: ${input.problem}
+        ${sequelInstructions}
         STRICT ARCHITECTURE: 3 parts. 
         IMPORTANT: Provide exactly 3 or 4 distinct choices at the end of Part 1 and Part 2.
         
@@ -206,6 +224,29 @@ export class AIClient {
   static async generateAvatar(heroName: string, heroPower: string): Promise<string | null> {
     const ai = this.getAI();
     const prompt = `Whimsical portrait of ${heroName} with power of ${heroPower}. Storybook style, 1K resolution.`;
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: { parts: [{ text: prompt }] },
+    });
+    const part = response.candidates?.[0]?.content?.parts.find(p => p.inlineData);
+    return part?.inlineData ? `data:${part.inlineData.mimeType};base64,${part.inlineData.data}` : null;
+  }
+
+  /**
+   * Generates a scene illustration for a story part.
+   * 
+   * @param context - Text description of the scene.
+   * @param heroDescription - visual cues for the hero to maintain consistency.
+   * @returns Base64 string of the image or null.
+   */
+  static async generateSceneIllustration(context: string, heroDescription: string): Promise<string | null> {
+    const ai = this.getAI();
+    const prompt = `
+      Children's book illustration.
+      Scene Action: ${context.substring(0, 400)}...
+      Character: ${heroDescription}.
+      Style: Whimsical, soft colors, storybook, 1K resolution.
+    `;
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: { parts: [{ text: prompt }] },

@@ -26,6 +26,11 @@ export type SleepSubMode = 'automatic' | 'parent-madlib' | 'child-friendly';
 export type StoryLength = 'short' | 'medium' | 'long';
 
 /**
+ * Available ambient sound themes.
+ */
+export type AmbientTheme = 'space' | 'rain' | 'forest' | 'magic' | 'auto';
+
+/**
  * Configuration for the Sleepy Time mode.
  */
 export interface SleepConfig {
@@ -36,6 +41,8 @@ export interface SleepConfig {
     scent: string;
     // Field for 'child-friendly'
     theme: string;
+    // Ambient audio preference
+    ambientTheme: AmbientTheme;
 }
 
 /**
@@ -48,6 +55,15 @@ export interface MadLibState {
     sillyWord: string;
     animal: string;
     feeling: string;
+}
+
+/** 
+ * Context from a previous story to generate a sequel.
+ */
+export interface SequelContext {
+    lastTitle: string;
+    lastHook: string;
+    lastLesson?: string;
 }
 
 /** 
@@ -76,6 +92,8 @@ export interface StoryState {
     narratorVoice: 'Puck' | 'Charon' | 'Kore' | 'Fenrir' | 'Aoede';
     /** Desired length of the story. */
     storyLength: StoryLength;
+    /** Optional context if this is a continuation of a previous story. */
+    sequelContext?: SequelContext;
 }
 
 /** 

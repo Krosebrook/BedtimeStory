@@ -5,7 +5,7 @@
 */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { StoryFull, StoryState } from '../types';
 import { SyncedText } from './SyncedText';
 import { narrationManager } from '../NarrationManager';
@@ -19,6 +19,11 @@ interface ReadingViewProps {
     narrationDuration: number;
     isNarrating: boolean;
     isNarrationLoading: boolean;
+    scenes?: Record<number, string>;
+    isSceneLoading?: boolean;
+    onGenerateScene?: () => void;
+    // New prop for pre-fetching
+    onGenerateSceneIndex?: (index: number) => void;
     onTogglePlayback: () => void;
     onStopNarration: () => void;
     onChoice: (choice: string) => void;
@@ -37,6 +42,7 @@ interface ReadingViewProps {
  * - Parallax background layers reacting to scroll.
  * - Staggered text entry with blur effects.
  * - Audio progress ring with interactive media controls.
+ * - Dynamic scene illustrations.
  */
 export const ReadingView: React.FC<ReadingViewProps> = ({
     story,
@@ -46,6 +52,10 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
     narrationDuration,
     isNarrating,
     isNarrationLoading,
+    scenes = {},
+    isSceneLoading = false,
+    onGenerateScene,
+    onGenerateSceneIndex,
     onTogglePlayback,
     onStopNarration,
     onChoice,
@@ -62,7 +72,7 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
     const [fontSize, setFontSize] = useState<'normal' | 'large' | 'huge'>('normal');
     const scrollRef = useRef<HTMLDivElement>(null);
     
-    // Subtler parallax offsets to ensure readability and focus on content
+    // Subtler parallax offsets
     const { scrollYProgress } = useScroll({ container: scrollRef });
     const y1 = useTransform(scrollYProgress, [0, 1], ['0%', '5%']);
     const y2 = useTransform(scrollYProgress, [0, 1], ['0%', '-3%']);
@@ -70,23 +80,63 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
     const rotate2 = useTransform(scrollYProgress, [0, 1], [0, -5]);
 
     const progressPercent = narrationDuration > 0 ? (narrationTime / narrationDuration) * 100 : 0;
+    const isSleepMode = input.mode === 'sleep';
+    const currentSceneImage = scenes[currentPartIndex];
+
+    // Pre-fetch next scene logic
+    useEffect(() => {
+        // Trigger if we have a way to fetch specific indices
+        if (onGenerateSceneIndex) {
+            // Case 1: Current scene just loaded (manually or cached), fetch next
+            if (currentSceneImage) {
+                const nextIndex = currentPartIndex + 1;
+                if (nextIndex < story.parts.length && !scenes[nextIndex]) {
+                     // Add small delay to not compete with other resources immediately
+                     const timer = setTimeout(() => {
+                         onGenerateSceneIndex(nextIndex);
+                     }, 2000);
+                     return () => clearTimeout(timer);
+                }
+            } 
+            // Case 2: Sleep Mode (Linear). Fetch next even if current doesn't exist? 
+            // The prompt says "or when the user is reading a linear part of the story in sleep mode".
+            // Let's assume if we are in sleep mode, we want visuals for the *next* part ready to go.
+            else if (isSleepMode) {
+                 const nextIndex = currentPartIndex + 1;
+                 if (nextIndex < story.parts.length && !scenes[nextIndex]) {
+                      const timer = setTimeout(() => {
+                           onGenerateSceneIndex(nextIndex);
+                      }, 5000); // Longer delay to let current narration start
+                      return () => clearTimeout(timer);
+                 }
+            }
+        }
+    }, [currentSceneImage, currentPartIndex, story.parts.length, scenes, onGenerateSceneIndex, isSleepMode]);
 
     // Ambient Audio Logic
     useEffect(() => {
         if (!isMuted) {
-            const text = (input.setting || input.sleepConfig.theme || '').toLowerCase();
-            if (text.includes('rain') || text.includes('water') || text.includes('ocean')) {
-                soundManager.playAmbient('rain');
-            } else if (text.includes('space') || text.includes('star') || text.includes('moon')) {
-                soundManager.playAmbient('space');
-            } else if (text.includes('forest') || text.includes('garden')) {
-                soundManager.playAmbient('forest');
+            let mode = 'magic';
+            
+            // Explicit override from setup
+            if (isSleepMode && input.sleepConfig.ambientTheme && input.sleepConfig.ambientTheme !== 'auto') {
+                mode = input.sleepConfig.ambientTheme;
             } else {
-                soundManager.playAmbient('magic');
+                // Auto-detect
+                const text = (input.setting || input.sleepConfig.theme || '').toLowerCase();
+                if (text.includes('rain') || text.includes('water') || text.includes('ocean')) {
+                    mode = 'rain';
+                } else if (text.includes('space') || text.includes('star') || text.includes('moon')) {
+                    mode = 'space';
+                } else if (text.includes('forest') || text.includes('garden')) {
+                    mode = 'forest';
+                }
             }
+            
+            soundManager.playAmbient(mode as any);
         }
         return () => soundManager.stopAmbient();
-    }, [input, isMuted]);
+    }, [input, isMuted, isSleepMode]);
 
     // Auto-scroll logic for Sleep Mode
     useEffect(() => {
@@ -95,7 +145,6 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
         }
     }, [currentPartIndex, input.mode]);
 
-    const isSleepMode = input.mode === 'sleep';
 
     const cycleFontSize = () => {
         if (fontSize === 'normal') setFontSize('large');
@@ -153,11 +202,29 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                 ref={scrollRef}
                 className={`w-full h-full p-6 md:p-16 border-[8px] border-black shadow-[24px_24px_0px_rgba(0,0,0,1)] overflow-y-auto custom-scrollbar relative overflow-hidden rounded-sm transition-colors duration-1000 ${isSleepMode ? 'bg-indigo-950 text-indigo-100' : 'bg-[#fdf6e3] text-gray-900'}`}
             >
-                <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden opacity-25 select-none" aria-hidden="true">
-                    <motion.div style={{ y: y1, rotate: rotate1 }} className={`absolute top-10 left-10 text-9xl ${isSleepMode ? 'text-white/20' : 'text-yellow-200/40'}`}>⭐</motion.div>
-                    <motion.div style={{ y: y2, rotate: rotate2 }} className={`absolute top-40 right-20 text-9xl ${isSleepMode ? 'text-blue-300/20' : 'text-blue-200/40'}`}>🌙</motion.div>
-                    <motion.div style={{ y: y1 }} className={`absolute top-[40%] left-[10%] text-8xl ${isSleepMode ? 'text-purple-400/20' : 'text-purple-200/40'}`}>☁️</motion.div>
-                </div>
+                {/* Background Parallax */}
+                {!currentSceneImage && (
+                    <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden opacity-25 select-none" aria-hidden="true">
+                        <motion.div style={{ y: y1, rotate: rotate1 }} className={`absolute top-10 left-10 text-9xl ${isSleepMode ? 'text-white/20' : 'text-yellow-200/40'}`}>⭐</motion.div>
+                        <motion.div style={{ y: y2, rotate: rotate2 }} className={`absolute top-40 right-20 text-9xl ${isSleepMode ? 'text-blue-300/20' : 'text-blue-200/40'}`}>🌙</motion.div>
+                        <motion.div style={{ y: y1 }} className={`absolute top-[40%] left-[10%] text-8xl ${isSleepMode ? 'text-purple-400/20' : 'text-purple-200/40'}`}>☁️</motion.div>
+                    </div>
+                )}
+                
+                {/* Scene Image Backdrop */}
+                <AnimatePresence>
+                    {currentSceneImage && (
+                         <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 0.2 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 z-0 pointer-events-none"
+                         >
+                            <img src={currentSceneImage} className="w-full h-full object-cover blur-sm scale-110" />
+                            <div className={`absolute inset-0 bg-gradient-to-b ${isSleepMode ? 'from-indigo-950/80 via-indigo-950/90 to-indigo-950' : 'from-[#fdf6e3]/80 via-[#fdf6e3]/90 to-[#fdf6e3]'}`} />
+                         </motion.div>
+                    )}
+                </AnimatePresence>
 
                 <div className="max-w-prose mx-auto pb-48 relative z-10">
                     <motion.header 
@@ -166,14 +233,28 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                         transition={{ duration: 1, ease: "easeOut" }}
                         className="flex flex-col items-center mb-16"
                     >
-                        {input.heroAvatarUrl && (
+                         {/* Avatar or Scene Hero */}
+                         <div className="relative group">
                             <motion.div 
                                 layoutId="avatar"
                                 className={`w-32 h-32 border-[8px] border-black rounded-full overflow-hidden shadow-[8px_8px_0px_rgba(0,0,0,1)] mb-8 bg-white ${isSleepMode ? 'animate-breathe' : ''}`}
                             >
-                                <img src={input.heroAvatarUrl} alt={`${input.heroName} avatar`} className="w-full h-full object-cover" />
+                                <img src={currentSceneImage || input.heroAvatarUrl} alt="Hero avatar" className="w-full h-full object-cover" />
                             </motion.div>
-                        )}
+                            
+                            {/* Visual Magic Trigger */}
+                            {onGenerateScene && !currentSceneImage && !isSleepMode && (
+                                <button
+                                    onClick={onGenerateScene}
+                                    disabled={isSceneLoading}
+                                    className="absolute -right-4 top-0 bg-purple-600 hover:bg-purple-500 text-white rounded-full w-12 h-12 flex items-center justify-center border-4 border-black shadow-lg transition-transform hover:scale-110 active:scale-90"
+                                    title="Spark Visual Magic"
+                                >
+                                    {isSceneLoading ? <span className="animate-spin text-xl">✨</span> : <span className="text-xl">🎨</span>}
+                                </button>
+                            )}
+                        </div>
+
                         <h1 className={`text-4xl md:text-6xl text-center tracking-tight leading-none uppercase font-black drop-shadow-md ${isSleepMode ? 'text-blue-200' : 'text-blue-950'}`}>
                             {story.title}
                         </h1>

@@ -15,6 +15,7 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
     const [phase, setPhase] = useState<AppPhase>('setup');
     const [isLoading, setIsLoading] = useState(false);
     const [isAvatarLoading, setIsAvatarLoading] = useState(false);
+    const [isSceneLoading, setIsSceneLoading] = useState(false);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     const [history, setHistory] = useState<CachedStory[]>([]);
     
@@ -34,15 +35,17 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
             texture: '', 
             sound: '', 
             scent: '', 
-            theme: 'Cloud Kingdom' 
+            theme: 'Cloud Kingdom',
+            ambientTheme: 'auto'
         }
     });
 
     const [story, setStory] = useState<StoryFull | null>(null);
     const [currentStoryId, setCurrentStoryId] = useState<string | null>(null);
     const [currentPartIndex, setCurrentPartIndex] = useState(0);
+    const [scenes, setScenes] = useState<Record<number, string>>({}); // PartIndex -> Base64
     const [isNarrating, setIsNarrating] = useState(false);
-    const [isNarrationLoading, setIsNarratingLoading] = useState(false);
+    const [isNarrationLoading, setIsNarrationLoading] = useState(false);
 
     // Sync online status and load history
     useEffect(() => {
@@ -82,7 +85,7 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
         if (state.isPlaying) { narrationManager.pause(); return; }
 
         setIsNarrating(true);
-        setIsNarratingLoading(true);
+        setIsNarrationLoading(true);
         try {
             const currentPart = story.parts[currentPartIndex];
             const isLastPart = currentPartIndex === story.parts.length - 1;
@@ -90,13 +93,12 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
                 ? `${currentPart.text}. Today's lesson is: ${story.lesson}. Here is a joke: ${story.joke}. ${story.tomorrowHook}` 
                 : currentPart.text;
             
-            // Critical: Use the specific voice selected in Setup
             await narrationManager.fetchNarration(textToRead, input.narratorVoice);
         } catch (err) {
             console.error("Narration failed", err);
             setIsNarrating(false);
         } finally {
-            setIsNarratingLoading(false);
+            setIsNarrationLoading(false);
         }
     }, [story, currentPartIndex, input.narratorVoice]);
 
@@ -169,6 +171,7 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
             setHistory(newHistory);
             
             setStory(data);
+            setScenes({});
             setPhase('reading');
             setCurrentPartIndex(0);
             soundManager.playPageTurn();
@@ -180,13 +183,67 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
         }
     }, [input, validateApiKey, setShowApiKeyDialog, isOnline]);
 
+    /**
+     * Generates a scene illustration for a specific part index.
+     * Can be used for current scene or pre-fetching next.
+     */
+    const generateScene = useCallback(async (index: number) => {
+        if (!story || !currentStoryId || !isOnline) return;
+        // Check if scene already exists or is being fetched (we can track loading per index if needed, but simplest is check cache)
+        if (scenes[index]) return; 
+        
+        // Ensure index is valid
+        if (index < 0 || index >= story.parts.length) return;
+
+        if (!(await validateApiKey())) return;
+
+        // If we are generating the *current* scene, show loading state. 
+        // If pre-fetching, we can be silent or use a separate loading state, but for now we reuse isSceneLoading if it's the current one.
+        const isCurrent = index === currentPartIndex;
+        if (isCurrent) setIsSceneLoading(true);
+
+        try {
+            const text = story.parts[index].text;
+            const heroDesc = `${input.heroName} with power of ${input.heroPower || 'imagination'}`;
+            const imageUrl = await AIClient.generateSceneIllustration(text, heroDesc);
+            
+            if (imageUrl) {
+                await storageManager.saveStoryScene(currentStoryId, index, imageUrl);
+                setScenes(prev => ({...prev, [index]: imageUrl}));
+                if (isCurrent) soundManager.playSparkle();
+            }
+        } catch (error: any) {
+             console.error(`Scene generation failed for index ${index}`, error);
+             // Only show dialog if it was an explicit user action for current scene
+             if (isCurrent && error.message?.includes("404")) setShowApiKeyDialog(true);
+        } finally {
+            if (isCurrent) setIsSceneLoading(false);
+        }
+    }, [story, currentStoryId, currentPartIndex, scenes, input, validateApiKey, setShowApiKeyDialog, isOnline]);
+
+    const generateCurrentScene = useCallback(() => {
+        return generateScene(currentPartIndex);
+    }, [generateScene, currentPartIndex]);
+
     const loadStoryFromHistory = useCallback((cached: CachedStory) => {
         setStory(cached.story);
         setCurrentStoryId(cached.id);
         handleInputChange('heroAvatarUrl', cached.avatar || '');
+        setScenes(cached.scenes || {});
         setPhase('reading');
         setCurrentPartIndex(0);
         soundManager.playPageTurn();
+    }, [handleInputChange]);
+
+    const prepareSequel = useCallback((cached: CachedStory) => {
+        handleInputChange('heroAvatarUrl', cached.avatar || '');
+        handleInputChange('sequelContext', {
+            lastTitle: cached.story.title,
+            lastHook: cached.story.tomorrowHook,
+            lastLesson: cached.story.lesson
+        });
+        handleInputChange('problem', '');
+        soundManager.playSparkle();
     }, [handleInputChange]);
 
     const deleteStory = useCallback(async (id: string) => {
@@ -219,15 +276,16 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
         setPhase('setup');
         setStory(null);
         setCurrentStoryId(null);
+        setScenes({});
         setCurrentPartIndex(0);
-        setInput(prev => ({ ...prev, heroAvatarUrl: '' }));
+        setInput(prev => ({ ...prev, heroAvatarUrl: '', sequelContext: undefined }));
     }, [stopNarration]);
 
     return {
-        phase, isLoading, isAvatarLoading, input, story, currentPartIndex, isNarrating, isNarrationLoading,
+        phase, isLoading, isAvatarLoading, isSceneLoading, input, story, currentPartIndex, scenes, isNarrating, isNarrationLoading,
         isOnline, history,
         handleInputChange, handleMadLibChange, handleSleepConfigChange, 
-        generateAvatar, generateStory, handleChoice, reset, 
-        playNarration, stopNarration, loadStoryFromHistory, deleteStory, submitFeedback
+        generateAvatar, generateStory, generateCurrentScene, generateScene, prepareSequel,
+        handleChoice, reset, playNarration, stopNarration, loadStoryFromHistory, deleteStory, submitFeedback
     };
 };
