@@ -5,20 +5,22 @@
 */
 
 import React, { useState, useEffect } from 'react';
+import { AppMode } from './types';
 
-const BEDTIME_WORDS = ["DREAM!", "WISH!", "MAGIC!", "GLOW!", "SHINE!", "SOFT!", "SLEEP!", "STORY!"];
+const PARTICLES_WORDS = ["MAGIC!", "GLOW!", "SHINE!", "SPARK!", "WONDER!"];
 
 interface LoadingFXProps {
     embedded?: boolean;
+    mode?: AppMode;
 }
 
-export const LoadingFX: React.FC<LoadingFXProps> = ({ embedded = false }) => {
+export const LoadingFX: React.FC<LoadingFXProps> = ({ embedded = false, mode = 'classic' }) => {
     const [particles, setParticles] = useState<{id: number, text: string, x: string, y: string, rot: number, color: string}[]>([]);
     
     useEffect(() => {
         const interval = setInterval(() => {
             const id = Date.now();
-            const text = BEDTIME_WORDS[Math.floor(Math.random() * BEDTIME_WORDS.length)];
+            const text = PARTICLES_WORDS[Math.floor(Math.random() * PARTICLES_WORDS.length)];
             const x = `${15 + Math.random() * 70}%`;
             const y = `${15 + Math.random() * 70}%`;
             const rot = Math.random() * 40 - 20;
@@ -28,6 +30,20 @@ export const LoadingFX: React.FC<LoadingFXProps> = ({ embedded = false }) => {
         }, 500);
         return () => clearInterval(interval);
     }, []);
+
+    let title = "Gathering Stardust...";
+    let subtitle = "Imagining a world of wonders just for you.";
+    let icon = "📖";
+
+    if (mode === 'sleep') {
+        title = "Weaving Dream...";
+        subtitle = "Lowering the lights and fluffing the clouds.";
+        icon = "🌙";
+    } else if (mode === 'madlibs') {
+        title = "Mixing the Pot...";
+        subtitle = "Adding a pinch of silliness and a dash of chaos.";
+        icon = "🤪";
+    }
 
     return (
         <div className={`${embedded ? 'absolute' : 'fixed'} inset-0 z-[300] bg-slate-950 flex flex-col items-center justify-center overflow-hidden`}>
@@ -69,14 +85,14 @@ export const LoadingFX: React.FC<LoadingFXProps> = ({ embedded = false }) => {
             <div className="relative z-10 text-center flex flex-col items-center p-4">
                 <div className="w-24 h-24 md:w-32 md:h-32 mb-8 relative">
                     <div className="absolute inset-0 bg-yellow-400 rounded-full blur-2xl opacity-20 animate-pulse"></div>
-                    <span className="text-6xl md:text-8xl animate-bounce inline-block">📖</span>
+                    <span className="text-6xl md:text-8xl animate-bounce inline-block">{icon}</span>
                 </div>
                 
                 <h2 className="font-comic text-4xl md:text-5xl text-blue-300 mb-4 tracking-widest animate-pulse" style={{textShadow: '0 0 20px rgba(147,197,253,0.5)'}}>
-                    Gathering Stardust...
+                    {title}
                 </h2>
                 <p className="font-serif text-lg md:text-xl text-slate-400 italic">
-                    Imagining a world of wonders just for you.
+                    {subtitle}
                 </p>
             </div>
 

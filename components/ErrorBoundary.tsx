@@ -6,7 +6,7 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
 
 interface Props {
-  children: ReactNode;
+  children?: ReactNode;
   fallback?: ReactNode;
 }
 
@@ -16,20 +16,20 @@ interface State {
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = {
+  public state: State = {
     hasError: false,
     error: null,
   };
 
-  public static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
   }
 
-  public render() {
+  render() {
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
       return (
@@ -40,7 +40,7 @@ export class ErrorBoundary extends Component<Props, State> {
             {this.state.error?.message}
           </div>
           <button 
-            onClick={() => this.setState({ hasError: false })}
+            onClick={() => this.setState({ hasError: false, error: null })}
             className="comic-btn bg-blue-500 text-white px-6 py-2 hover:bg-blue-400"
           >
             Try Again

@@ -11,6 +11,8 @@ import { narrationManager } from '../NarrationManager';
 import { soundManager } from '../SoundManager';
 import { storageManager, CachedStory } from '../lib/StorageManager';
 
+const STORAGE_KEY_INPUT = 'bedtime_story_draft';
+
 export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowApiKeyDialog: (show: boolean) => void) => {
     const [phase, setPhase] = useState<AppPhase>('setup');
     const [isLoading, setIsLoading] = useState(false);
@@ -19,6 +21,7 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     const [history, setHistory] = useState<CachedStory[]>([]);
     
+    // Initialize with default, then hydrate from storage
     const [input, setInput] = useState<StoryState>({
         heroName: '',
         heroPower: '',
@@ -43,9 +46,31 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
     const [story, setStory] = useState<StoryFull | null>(null);
     const [currentStoryId, setCurrentStoryId] = useState<string | null>(null);
     const [currentPartIndex, setCurrentPartIndex] = useState(0);
-    const [scenes, setScenes] = useState<Record<number, string>>({}); // PartIndex -> Base64
+    const [scenes, setScenes] = useState<Record<number, string>>({}); 
     const [isNarrating, setIsNarrating] = useState(false);
     const [isNarrationLoading, setIsNarrationLoading] = useState(false);
+
+    // Hydrate input from local storage on mount
+    useEffect(() => {
+        const saved = localStorage.getItem(STORAGE_KEY_INPUT);
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                // Merge to ensure new fields in StoryState are preserved if missing in storage
+                setInput(prev => ({ ...prev, ...parsed }));
+            } catch (e) {
+                console.error("Failed to load saved draft", e);
+            }
+        }
+    }, []);
+
+    // Persist input to local storage on change
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            localStorage.setItem(STORAGE_KEY_INPUT, JSON.stringify(input));
+        }, 500); // Debounce save
+        return () => clearTimeout(timeout);
+    }, [input]);
 
     // Sync online status and load history
     useEffect(() => {
@@ -183,22 +208,12 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
         }
     }, [input, validateApiKey, setShowApiKeyDialog, isOnline]);
 
-    /**
-     * Generates a scene illustration for a specific part index.
-     * Can be used for current scene or pre-fetching next.
-     */
     const generateScene = useCallback(async (index: number) => {
         if (!story || !currentStoryId || !isOnline) return;
-        // Check if scene already exists or is being fetched (we can track loading per index if needed, but simplest is check cache)
         if (scenes[index]) return; 
-        
-        // Ensure index is valid
         if (index < 0 || index >= story.parts.length) return;
-
         if (!(await validateApiKey())) return;
 
-        // If we are generating the *current* scene, show loading state. 
-        // If pre-fetching, we can be silent or use a separate loading state, but for now we reuse isSceneLoading if it's the current one.
         const isCurrent = index === currentPartIndex;
         if (isCurrent) setIsSceneLoading(true);
 
@@ -214,7 +229,6 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
             }
         } catch (error: any) {
              console.error(`Scene generation failed for index ${index}`, error);
-             // Only show dialog if it was an explicit user action for current scene
              if (isCurrent && error.message?.includes("404")) setShowApiKeyDialog(true);
         } finally {
             if (isCurrent) setIsSceneLoading(false);
@@ -278,7 +292,9 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
         setCurrentStoryId(null);
         setScenes({});
         setCurrentPartIndex(0);
-        setInput(prev => ({ ...prev, heroAvatarUrl: '', sequelContext: undefined }));
+        // We do NOT clear the input state fully on reset to allow easy re-generation with tweaks
+        // But we clear context specific things
+        setInput(prev => ({ ...prev, sequelContext: undefined }));
     }, [stopNarration]);
 
     return {
