@@ -22,7 +22,6 @@ interface ReadingViewProps {
     scenes?: Record<number, string>;
     isSceneLoading?: boolean;
     onGenerateScene?: () => void;
-    // New prop for pre-fetching
     onGenerateSceneIndex?: (index: number) => void;
     onTogglePlayback: () => void;
     onStopNarration: () => void;
@@ -35,432 +34,123 @@ interface ReadingViewProps {
     onSubmitFeedback?: (rating: number, text: string) => void;
 }
 
-/**
- * ReadingView
- * 
- * The main narrative interface. Features:
- * - Parallax background layers reacting to scroll.
- * - Staggered text entry with blur effects.
- * - Audio progress ring with interactive media controls.
- * - Dynamic scene illustrations.
- */
 export const ReadingView: React.FC<ReadingViewProps> = ({
-    story,
-    input,
-    currentPartIndex,
-    narrationTime,
-    narrationDuration,
-    isNarrating,
-    isNarrationLoading,
-    scenes = {},
-    isSceneLoading = false,
-    onGenerateScene,
-    onGenerateSceneIndex,
-    onTogglePlayback,
-    onStopNarration,
-    onChoice,
-    onReset,
-    toggleMute,
-    isMuted,
-    playbackRate,
-    setPlaybackRate,
-    onSubmitFeedback
+    story, input, currentPartIndex, narrationTime, narrationDuration, isNarrating, isNarrationLoading,
+    scenes = {}, isSceneLoading = false, onGenerateScene, onGenerateSceneIndex, onTogglePlayback, 
+    onStopNarration, onChoice, onReset, toggleMute, isMuted, playbackRate, setPlaybackRate, onSubmitFeedback
 }) => {
-    const [rating, setRating] = useState(0);
-    const [feedbackText, setFeedbackText] = useState('');
-    const [hasSubmittedFeedback, setHasSubmittedFeedback] = useState(false);
-    const [fontSize, setFontSize] = useState<'normal' | 'large' | 'huge'>('normal');
+    const [fontSize, setFontSize] = useState<'normal' | 'large'>('normal');
     const scrollRef = useRef<HTMLDivElement>(null);
-    
-    // Subtler parallax offsets
     const { scrollYProgress } = useScroll({ container: scrollRef });
-    const y1 = useTransform(scrollYProgress, [0, 1], ['0%', '5%']);
-    const y2 = useTransform(scrollYProgress, [0, 1], ['0%', '-3%']);
-    const rotate1 = useTransform(scrollYProgress, [0, 1], [0, 5]);
-    const rotate2 = useTransform(scrollYProgress, [0, 1], [0, -5]);
+    const isSleepMode = input.mode === 'sleep';
 
     const progressPercent = narrationDuration > 0 ? (narrationTime / narrationDuration) * 100 : 0;
-    const isSleepMode = input.mode === 'sleep';
-    const currentSceneImage = scenes[currentPartIndex];
+    const storyProgress = ((currentPartIndex + 1) / story.parts.length) * 100;
 
-    // Pre-fetch next scene logic
+    // Responsive font logic
+    const getFontSizeClass = () => fontSize === 'large' ? 'text-2xl md:text-4xl' : 'text-lg md:text-2xl';
+
+    // Auto-scroll for Sleep Mode (focus on current part)
     useEffect(() => {
-        // Trigger if we have a way to fetch specific indices
-        if (onGenerateSceneIndex) {
-            // Case 1: Current scene just loaded (manually or cached), fetch next
-            if (currentSceneImage) {
-                const nextIndex = currentPartIndex + 1;
-                if (nextIndex < story.parts.length && !scenes[nextIndex]) {
-                     // Add small delay to not compete with other resources immediately
-                     const timer = setTimeout(() => {
-                         onGenerateSceneIndex(nextIndex);
-                     }, 2000);
-                     return () => clearTimeout(timer);
-                }
-            } 
-            // Case 2: Sleep Mode (Linear). Fetch next even if current doesn't exist? 
-            // The prompt says "or when the user is reading a linear part of the story in sleep mode".
-            // Let's assume if we are in sleep mode, we want visuals for the *next* part ready to go.
-            else if (isSleepMode) {
-                 const nextIndex = currentPartIndex + 1;
-                 if (nextIndex < story.parts.length && !scenes[nextIndex]) {
-                      const timer = setTimeout(() => {
-                           onGenerateSceneIndex(nextIndex);
-                      }, 5000); // Longer delay to let current narration start
-                      return () => clearTimeout(timer);
-                 }
+        if (isSleepMode && scrollRef.current) {
+            const container = scrollRef.current;
+            const currentPart = container.querySelector(`[data-part="${currentPartIndex}"]`);
+            if (currentPart) {
+                currentPart.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
-    }, [currentSceneImage, currentPartIndex, story.parts.length, scenes, onGenerateSceneIndex, isSleepMode]);
-
-    // Ambient Audio Logic
-    useEffect(() => {
-        if (!isMuted) {
-            let mode = 'magic';
-            
-            // Explicit override from setup
-            if (isSleepMode && input.sleepConfig.ambientTheme && input.sleepConfig.ambientTheme !== 'auto') {
-                mode = input.sleepConfig.ambientTheme;
-            } else {
-                // Auto-detect
-                const text = (input.setting || input.sleepConfig.theme || '').toLowerCase();
-                if (text.includes('rain') || text.includes('water') || text.includes('ocean')) {
-                    mode = 'rain';
-                } else if (text.includes('space') || text.includes('star') || text.includes('moon')) {
-                    mode = 'space';
-                } else if (text.includes('forest') || text.includes('garden')) {
-                    mode = 'forest';
-                }
-            }
-            
-            soundManager.playAmbient(mode as any);
-        }
-        return () => soundManager.stopAmbient();
-    }, [input, isMuted, isSleepMode]);
-
-    // Auto-scroll logic for Sleep Mode
-    useEffect(() => {
-        if (input.mode === 'sleep' && scrollRef.current) {
-             scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-    }, [currentPartIndex, input.mode]);
-
-
-    const cycleFontSize = () => {
-        if (fontSize === 'normal') setFontSize('large');
-        else if (fontSize === 'large') setFontSize('huge');
-        else setFontSize('normal');
-    };
-
-    const getFontSizeClass = () => {
-        if (fontSize === 'huge') return 'text-4xl leading-[1.6]';
-        if (fontSize === 'large') return 'text-3xl leading-[1.6]';
-        return 'text-2xl leading-relaxed';
-    };
-
-    const handleSubmit = () => {
-        setHasSubmittedFeedback(true); 
-        soundManager.playSparkle();
-        if (onSubmitFeedback) {
-            onSubmitFeedback(rating, feedbackText);
-        }
-    };
-
-    const choiceColors = [
-        'bg-yellow-400 hover:bg-yellow-300 text-black',
-        'bg-blue-400 hover:bg-blue-300 text-black',
-        'bg-green-400 hover:bg-green-300 text-black',
-        'bg-purple-400 hover:bg-purple-300 text-white'
-    ];
+    }, [currentPartIndex, isSleepMode]);
 
     return (
-        <motion.main 
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="relative w-full max-w-4xl h-[92vh] flex flex-col p-4"
-            role="main"
-            aria-label={`Reading story: ${story.title}`}
-        >
-            <div className="absolute top-0 right-4 flex gap-4 z-[120]">
-                <button 
-                    onClick={cycleFontSize}
-                    className="bg-white/10 hover:bg-white/20 p-3 rounded-full border-2 border-white/20 backdrop-blur-md transition-all text-xl shadow-lg font-serif font-bold w-12 h-12 flex items-center justify-center text-white"
-                    aria-label="Change font size"
-                >
-                    {fontSize === 'normal' ? 'T' : (fontSize === 'large' ? 'T+' : 'T++')}
-                </button>
-                <button 
-                    onClick={toggleMute}
-                    className="bg-white/10 hover:bg-white/20 p-3 rounded-full border-2 border-white/20 backdrop-blur-md transition-all text-2xl shadow-lg"
-                    aria-label={isMuted ? "Unmute sounds" : "Mute sounds"}
-                >
-                    {isMuted ? '🔇' : '🔊'}
-                </button>
-            </div>
-
-            <div 
-                ref={scrollRef}
-                className={`w-full h-full p-6 md:p-16 border-[8px] border-black shadow-[24px_24px_0px_rgba(0,0,0,1)] overflow-y-auto custom-scrollbar relative overflow-hidden rounded-sm transition-colors duration-1000 ${isSleepMode ? 'bg-indigo-950 text-indigo-100' : 'bg-[#fdf6e3] text-gray-900'}`}
-            >
-                {/* Background Parallax */}
-                {!currentSceneImage && (
-                    <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden opacity-25 select-none" aria-hidden="true">
-                        <motion.div style={{ y: y1, rotate: rotate1 }} className={`absolute top-10 left-10 text-9xl ${isSleepMode ? 'text-white/20' : 'text-yellow-200/40'}`}>⭐</motion.div>
-                        <motion.div style={{ y: y2, rotate: rotate2 }} className={`absolute top-40 right-20 text-9xl ${isSleepMode ? 'text-blue-300/20' : 'text-blue-200/40'}`}>🌙</motion.div>
-                        <motion.div style={{ y: y1 }} className={`absolute top-[40%] left-[10%] text-8xl ${isSleepMode ? 'text-purple-400/20' : 'text-purple-200/40'}`}>☁️</motion.div>
-                    </div>
-                )}
-                
-                {/* Scene Image Backdrop */}
-                <AnimatePresence>
-                    {currentSceneImage && (
-                         <motion.div 
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 0.2 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute inset-0 z-0 pointer-events-none"
-                         >
-                            <img src={currentSceneImage} className="w-full h-full object-cover blur-sm scale-110" />
-                            <div className={`absolute inset-0 bg-gradient-to-b ${isSleepMode ? 'from-indigo-950/80 via-indigo-950/90 to-indigo-950' : 'from-[#fdf6e3]/80 via-[#fdf6e3]/90 to-[#fdf6e3]'}`} />
-                         </motion.div>
-                    )}
-                </AnimatePresence>
-
-                <div className="max-w-prose mx-auto pb-48 relative z-10">
-                    <motion.header 
-                        initial={{ y: -40, opacity: 0, filter: 'blur(8px)' }}
-                        animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
-                        transition={{ duration: 1, ease: "easeOut" }}
-                        className="flex flex-col items-center mb-16"
-                    >
-                         {/* Avatar or Scene Hero */}
-                         <div className="relative group">
-                            <motion.div 
-                                layoutId="avatar"
-                                className={`w-32 h-32 border-[8px] border-black rounded-full overflow-hidden shadow-[8px_8px_0px_rgba(0,0,0,1)] mb-8 bg-white ${isSleepMode ? 'animate-breathe' : ''}`}
-                            >
-                                <img src={currentSceneImage || input.heroAvatarUrl} alt="Hero avatar" className="w-full h-full object-cover" />
-                            </motion.div>
-                            
-                            {/* Visual Magic Trigger */}
-                            {onGenerateScene && !currentSceneImage && !isSleepMode && (
-                                <button
-                                    onClick={onGenerateScene}
-                                    disabled={isSceneLoading}
-                                    className="absolute -right-4 top-0 bg-purple-600 hover:bg-purple-500 text-white rounded-full w-12 h-12 flex items-center justify-center border-4 border-black shadow-lg transition-transform hover:scale-110 active:scale-90"
-                                    title="Spark Visual Magic"
-                                >
-                                    {isSceneLoading ? <span className="animate-spin text-xl">✨</span> : <span className="text-xl">🎨</span>}
-                                </button>
-                            )}
-                        </div>
-
-                        <h1 className={`text-4xl md:text-6xl text-center tracking-tight leading-none uppercase font-black drop-shadow-md ${isSleepMode ? 'text-blue-200' : 'text-blue-950'}`}>
-                            {story.title}
-                        </h1>
-                        <div className="h-1.5 w-32 bg-red-600 mt-6 rounded-full shadow-sm"></div>
-                    </motion.header>
-                    
-                    <article className="space-y-20">
-                        {story.parts.slice(0, currentPartIndex + 1).map((part, i) => (
-                            <motion.section 
-                                key={i} 
-                                initial={{ opacity: 0, y: 80, scale: 0.98, filter: 'blur(10px)' }}
-                                animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-                                transition={{ duration: 0.9, ease: [0.19, 1, 0.22, 1] }}
-                                className={`${getFontSizeClass()} relative ${isSleepMode ? 'text-indigo-100 font-serif' : ''}`}
-                            >
-                                <div className={`absolute -left-12 -top-6 text-7xl opacity-[0.05] font-comic -z-10 select-none ${isSleepMode ? 'text-white' : 'text-black'}`} aria-hidden="true">
-                                    {i + 1}
-                                </div>
-                                
-                                <SyncedText 
-                                    text={part.text} 
-                                    isActive={isNarrating && i === currentPartIndex} 
-                                    currentTime={narrationTime} 
-                                    duration={narrationDuration} 
-                                />
-                                
-                                {i === currentPartIndex && part.choices && part.choices.length > 0 && !isSleepMode && (
-                                    <motion.div 
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.8 }}
-                                        className="mt-16 bg-blue-50/70 backdrop-blur-md p-6 md:p-10 border-4 border-black border-dashed rounded-2xl shadow-inner"
-                                    >
-                                        <h2 className="font-comic text-2xl text-red-600 text-center mb-8 uppercase tracking-[0.2em] animate-pulse">
-                                            CHOOSE YOUR DESTINY
-                                        </h2>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                                            {part.choices.map((choice, idx) => {
-                                                const isLastAndOdd = idx === (part.choices?.length || 0) - 1 && (part.choices?.length || 0) % 2 !== 0;
-                                                const colorClass = choiceColors[idx % choiceColors.length];
-
-                                                return (
-                                                    <motion.button 
-                                                        key={idx}
-                                                        initial={{ x: -20, opacity: 0 }}
-                                                        animate={{ x: 0, opacity: 1 }}
-                                                        transition={{ delay: 0.5 + (idx * 0.1) }}
-                                                        whileHover={{ scale: 1.02, y: -4 }}
-                                                        whileTap={{ scale: 0.97 }}
-                                                        onClick={() => onChoice(choice)}
-                                                        className={`comic-btn p-4 md:p-6 text-lg md:text-xl leading-snug text-left shadow-[4px_4px_0px_rgba(0,0,0,0.8)] flex items-start h-full ${colorClass} ${isLastAndOdd ? 'md:col-span-2' : ''}`}
-                                                    >
-                                                        <span className="flex-shrink-0 w-8 h-8 rounded-full bg-black/20 text-current text-sm flex items-center justify-center font-black mr-4 shadow-sm mt-0.5 border-2 border-black/10">
-                                                            {idx + 1}
-                                                        </span>
-                                                        <span>{choice}</span>
-                                                    </motion.button>
-                                                );
-                                            })}
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </motion.section>
-                        ))}
-
-                        {currentPartIndex === story.parts.length - 1 && (
-                            <motion.footer 
-                                initial={{ opacity: 0, y: 100 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 1.2, delay: 0.3 }}
-                                className={`mt-24 pt-16 border-t-[8px] border-double space-y-12 ${isSleepMode ? 'border-indigo-800' : 'border-black'}`}
-                            >
-                                {story.rewardBadge && (
-                                    <motion.div 
-                                        initial={{ scale: 0.5, opacity: 0 }}
-                                        animate={{ scale: 1, opacity: 1 }}
-                                        transition={{ type: "spring", bounce: 0.5 }}
-                                        className="bg-gradient-to-br from-yellow-200 to-yellow-400 p-8 rounded-3xl border-[6px] border-black shadow-[12px_12px_0px_rgba(0,0,0,0.3)] text-center relative overflow-hidden"
-                                    >
-                                        <div className="absolute inset-0 bg-white/30 animate-pulse"></div>
-                                        <h3 className="relative font-comic text-2xl uppercase tracking-widest text-yellow-900 mb-4">New Memory Unlocked!</h3>
-                                        <div className="relative text-8xl mb-4 drop-shadow-md filter hover:brightness-110 transition-all cursor-pointer transform hover:scale-110">
-                                            {story.rewardBadge.emoji}
-                                        </div>
-                                        <h4 className="relative font-comic text-4xl text-black mb-2">{story.rewardBadge.title}</h4>
-                                        <p className="relative font-serif italic text-yellow-900">{story.rewardBadge.description}</p>
-                                    </motion.div>
-                                )}
-
-                                <div className={`p-10 border-4 shadow-[12px_12px_0px_rgba(0,0,0,0.2)] -rotate-1 hover:rotate-0 transition-transform duration-500 ${isSleepMode ? 'bg-indigo-900 border-indigo-700 text-indigo-100' : 'bg-green-50 border-black text-green-800'}`}>
-                                    <h3 className="font-comic text-4xl mb-6 underline decoration-yellow-400 underline-offset-8">Morning Mission</h3>
-                                    <p className="text-3xl font-serif italic leading-relaxed">{story.lesson}</p>
-                                </div>
-
-                                {!isSleepMode && (
-                                    <section className="bg-white border-4 border-black p-10 shadow-[16px_16px_0px_rgba(0,0,0,1)]">
-                                        {hasSubmittedFeedback ? (
-                                            <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="text-center py-8">
-                                                <p className="font-comic text-5xl text-green-600 mb-4">MISSION COMPLETE!</p>
-                                                <p className="text-2xl text-gray-500 italic font-serif">The chronicles have been updated with your magic.</p>
-                                            </motion.div>
-                                        ) : (
-                                            <>
-                                                <h3 className="font-comic text-4xl text-center text-blue-900 mb-8">Was this adventure epic?</h3>
-                                                <div className="flex justify-center gap-6 mb-10">
-                                                    {[1, 2, 3, 4, 5].map((s) => (
-                                                        <button 
-                                                            key={s} 
-                                                            onClick={() => { setRating(s); soundManager.playSparkle(); }}
-                                                            className={`text-6xl transition-all hover:scale-125 hover:rotate-12 active:scale-90 ${rating >= s ? 'grayscale-0 drop-shadow-lg' : 'grayscale opacity-20'}`}
-                                                            aria-label={`Rate ${s} stars`}
-                                                        >
-                                                            ⭐
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                <textarea 
-                                                    value={feedbackText}
-                                                    onChange={(e) => setFeedbackText(e.target.value)}
-                                                    placeholder="Write a message for the Multiverse..."
-                                                    className="w-full p-6 border-4 border-black font-serif text-2xl focus:bg-yellow-50 outline-none mb-8 min-h-[160px] shadow-inner transition-colors"
-                                                />
-                                                <button 
-                                                    onClick={handleSubmit}
-                                                    className="comic-btn w-full bg-yellow-400 py-6 text-3xl hover:bg-yellow-300 shadow-[8px_8px_0px_rgba(0,0,0,1)]"
-                                                >
-                                                    SEAL THE MAGIC
-                                                </button>
-                                            </>
-                                        )}
-                                    </section>
-                                )}
-
-                                <button 
-                                    onClick={onReset}
-                                    className={`comic-btn w-full text-4xl py-8 shadow-[12px_12px_0px_rgba(0,0,0,1)] transition-transform active:scale-95 ${isSleepMode ? 'bg-indigo-800 text-indigo-100 border-indigo-600 shadow-indigo-950' : 'bg-blue-800 text-white hover:bg-blue-700'}`}
-                                >
-                                    {isSleepMode ? 'GOODNIGHT...' : 'SLEEP WELL, HERO'}
-                                </button>
-                            </motion.footer>
-                        )}
-                    </article>
+        <motion.main initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative w-full h-[100dvh] flex flex-col bg-slate-950 font-serif" role="main" aria-label={`Story: ${story.title}`}>
+            
+            {/* Header Controls */}
+            <header className="absolute top-0 inset-x-0 p-4 flex justify-between items-center z-[120] pointer-events-none">
+                <div className="pointer-events-auto flex gap-2">
+                    <button onClick={onReset} className="bg-white/10 hover:bg-white/20 p-2 rounded-full border border-white/20 backdrop-blur-md text-white px-4 font-comic text-xs uppercase" aria-label="Exit to menu">Menu</button>
                 </div>
+                <div className="pointer-events-auto flex gap-3">
+                    <button onClick={() => setFontSize(f => f === 'normal' ? 'large' : 'normal')} className="bg-white/10 hover:bg-white/20 p-3 rounded-full border border-white/20 backdrop-blur-md text-white font-bold w-12 h-12 flex items-center justify-center" aria-label="Toggle font size">A+</button>
+                    <button onClick={toggleMute} className="bg-white/10 hover:bg-white/20 p-3 rounded-full border border-white/20 backdrop-blur-md text-2xl w-12 h-12 flex items-center justify-center" aria-label={isMuted ? "Unmute" : "Mute"}>{isMuted ? '🔇' : '🔊'}</button>
+                </div>
+            </header>
 
-                <motion.nav 
-                    layout
-                    className={`absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-6 md:gap-10 border-[6px] border-black p-4 md:p-6 px-8 md:px-14 shadow-[20px_20px_0px_rgba(0,0,0,1)] z-[130] min-w-[320px] md:min-w-[420px] rounded-sm ${isSleepMode ? 'bg-indigo-900 text-white shadow-black' : 'bg-white text-black'}`}
-                >
-                    {isNarrationLoading ? (
-                        <div className="flex items-center justify-center w-full gap-5 font-comic text-blue-600 animate-pulse text-2xl md:text-3xl">
-                            <span className="text-4xl animate-spin">✨</span> INFUSING TALE...
-                        </div>
-                    ) : (
-                        <>
-                            <div className="flex flex-col gap-1 items-center mr-4">
-                                <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Speed</span>
-                                <div className="flex gap-1">
-                                    {[0.8, 1.0, 1.2].map(rate => (
-                                        <button 
-                                            key={rate}
-                                            onClick={() => setPlaybackRate(rate)}
-                                            className={`text-xs font-bold px-2 py-1 border border-current rounded ${playbackRate === rate ? 'bg-black text-white' : 'opacity-50 hover:opacity-100'}`}
-                                            title={`${rate === 0.8 ? 'Slow' : rate === 1.2 ? 'Fast' : 'Normal'}`}
-                                        >
-                                            {rate}x
+            {/* Main Content Area */}
+            <div ref={scrollRef} className={`flex-1 overflow-y-auto custom-scrollbar transition-colors duration-1000 p-6 md:p-12 lg:p-24 ${isSleepMode ? 'bg-indigo-950 text-indigo-100' : 'bg-[#fdf6e3] text-gray-900'}`}>
+                <div className="max-w-prose mx-auto space-y-16 pb-40">
+                    <header className="flex flex-col items-center mb-10">
+                        <motion.div layoutId="avatar" className="w-24 h-24 md:w-32 md:h-32 border-4 border-black rounded-full overflow-hidden shadow-xl mb-6 bg-white shrink-0">
+                            <img src={scenes[currentPartIndex] || input.heroAvatarUrl} alt="Hero" className="w-full h-full object-cover" />
+                        </motion.div>
+                        <h1 className="text-3xl md:text-5xl lg:text-6xl text-center uppercase font-black tracking-tight">{story.title}</h1>
+                        <div className="h-1 w-20 bg-red-600 mt-4 rounded-full"></div>
+                    </header>
+
+                    {story.parts.map((part, i) => (
+                        <motion.section 
+                            key={i} 
+                            data-part={i}
+                            initial={{ opacity: 0, y: 30 }} 
+                            whileInView={{ opacity: 1, y: 0 }} 
+                            viewport={{ once: true, margin: "-100px" }}
+                            className={`${getFontSizeClass()} leading-relaxed ${i > currentPartIndex ? 'opacity-20 pointer-events-none' : ''}`}
+                        >
+                            <SyncedText text={part.text} isActive={isNarrating && i === currentPartIndex} currentTime={narrationTime} duration={narrationDuration} />
+                            
+                            {i === currentPartIndex && part.choices && part.choices.length > 0 && !isSleepMode && (
+                                <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {part.choices.map((c, idx) => (
+                                        <button key={idx} onClick={() => onChoice(c)} className="comic-btn p-4 text-left bg-blue-500 text-white rounded-xl border-4 border-black shadow-[4px_4px_0px_black] hover:scale-[1.02] active:scale-[0.98] transition-all">
+                                            {c}
                                         </button>
                                     ))}
                                 </div>
-                            </div>
+                            )}
+                        </motion.section>
+                    ))}
 
-                            <div className="relative group">
-                                <svg className="absolute -inset-4 w-24 h-24 -rotate-90 pointer-events-none opacity-80">
-                                    <circle cx="48" cy="48" r="42" fill="transparent" stroke={isSleepMode ? "#312e81" : "#f1f5f9"} strokeWidth="8" />
-                                    <circle 
-                                        cx="48" cy="48" r="42" fill="transparent" stroke={isSleepMode ? "#818cf8" : "#2563eb"} strokeWidth="8" 
-                                        strokeDasharray="263.8" 
-                                        strokeDashoffset={263.8 - (263.8 * progressPercent) / 100}
-                                        strokeLinecap="round"
-                                        className="transition-all duration-300"
-                                    />
-                                </svg>
-                                <button 
-                                    onClick={onTogglePlayback}
-                                    className="relative text-6xl md:text-7xl hover:scale-110 transition-transform active:scale-90 z-10"
-                                >
-                                    {narrationManager.state.isPlaying ? '⏸️' : '▶️'}
-                                </button>
+                    {currentPartIndex === story.parts.length - 1 && (
+                        <footer className="pt-20 border-t-4 border-dashed border-current space-y-10">
+                            <div className="bg-white/5 p-8 rounded-3xl text-center border-2 border-current italic">
+                                <h3 className="font-comic text-2xl uppercase mb-2">Lesson of the Day</h3>
+                                <p className="text-xl md:text-2xl">{story.lesson}</p>
                             </div>
-
-                            <button 
-                                onClick={onStopNarration}
-                                className="text-5xl md:text-6xl opacity-30 hover:opacity-100 transition-all hover:scale-110 active:scale-90"
-                            >
-                                ⏹️
-                            </button>
-                            
-                            <div className="h-12 w-1 bg-current opacity-10 rounded-full hidden md:block" aria-hidden="true"></div>
-                            
-                            <div className="hidden md:flex flex-col select-none">
-                                <span className={`font-comic text-3xl leading-none tracking-tight ${isSleepMode ? 'text-indigo-200' : 'text-blue-900'}`}>STORYTELLER</span>
-                                <span className="font-sans text-[11px] font-black uppercase opacity-40 tracking-[0.2em] mt-2">{input.narratorVoice} v2.5 Synthesis</span>
-                            </div>
-                        </>
+                            <button onClick={onReset} className="comic-btn w-full bg-red-600 text-white py-6 text-3xl rounded-xl shadow-[8px_8px_0px_black] uppercase font-comic">End Adventure</button>
+                        </footer>
                     )}
-                </motion.nav>
+                </div>
             </div>
+
+            {/* Player Bar */}
+            <motion.nav layout className={`p-4 md:p-6 border-t-4 border-black z-[130] flex flex-wrap items-center justify-center gap-4 md:gap-8 shadow-2xl ${isSleepMode ? 'bg-indigo-900 text-white' : 'bg-white text-black'}`}>
+                <div className="flex flex-col items-center">
+                    <span className="text-[10px] font-black uppercase opacity-60">Part {currentPartIndex + 1} of {story.parts.length}</span>
+                    <div className="w-24 h-1.5 bg-black/10 rounded-full mt-1 overflow-hidden">
+                        <div className="h-full bg-current transition-all" style={{ width: `${storyProgress}%` }}></div>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-6">
+                    <div className="relative w-16 h-16 md:w-20 md:h-20 flex items-center justify-center">
+                        <svg className="absolute inset-0 w-full h-full -rotate-90">
+                            <circle cx="50%" cy="50%" r="42%" fill="transparent" stroke="currentColor" strokeWidth="6" strokeDasharray="260" strokeDashoffset={260 - (260 * progressPercent) / 100} className="opacity-40" />
+                        </svg>
+                        <button onClick={onTogglePlayback} className="text-4xl md:text-5xl hover:scale-110 active:scale-90 transition-transform" aria-label={isNarrating ? "Pause" : "Play"}>
+                            {isNarrating ? '⏸️' : '▶️'}
+                        </button>
+                    </div>
+                    <button onClick={onStopNarration} className="text-3xl opacity-40 hover:opacity-100 transition-opacity" aria-label="Stop">⏹️</button>
+                </div>
+
+                <div className="hidden sm:flex flex-col">
+                    <span className="font-comic text-xl leading-none">Narrator: {input.narratorVoice}</span>
+                    <div className="flex gap-2 mt-2">
+                        {[0.8, 1.0, 1.2].map(r => (
+                            <button key={r} onClick={() => setPlaybackRate(r)} className={`text-[10px] font-bold border-2 border-current px-2 py-0.5 rounded-full ${playbackRate === r ? 'bg-current text-white' : 'opacity-40'}`}>{r}x</button>
+                        ))}
+                    </div>
+                </div>
+            </motion.nav>
         </motion.main>
     );
 };

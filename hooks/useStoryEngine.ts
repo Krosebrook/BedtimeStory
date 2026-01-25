@@ -56,7 +56,6 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                // Merge to ensure new fields in StoryState are preserved if missing in storage
                 setInput(prev => ({ ...prev, ...parsed }));
             } catch (e) {
                 console.error("Failed to load saved draft", e);
@@ -68,7 +67,7 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
     useEffect(() => {
         const timeout = setTimeout(() => {
             localStorage.setItem(STORAGE_KEY_INPUT, JSON.stringify(input));
-        }, 500); // Debounce save
+        }, 500); 
         return () => clearTimeout(timeout);
     }, [input]);
 
@@ -106,8 +105,8 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
     const playNarration = useCallback(async () => {
         if (!story) return;
         const state = narrationManager.state;
-        if (state.isPaused) { narrationManager.play(); return; }
-        if (state.isPlaying) { narrationManager.pause(); return; }
+        if (state.isPaused) { narrationManager.play(); setIsNarrating(true); return; }
+        if (state.isPlaying) { narrationManager.pause(); setIsNarrating(false); return; }
 
         setIsNarrating(true);
         setIsNarrationLoading(true);
@@ -118,6 +117,7 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
                 ? `${currentPart.text}. Today's lesson is: ${story.lesson}. Here is a joke: ${story.joke}. ${story.tomorrowHook}` 
                 : currentPart.text;
             
+            // Fix: Pass the narrator voice to the manager
             await narrationManager.fetchNarration(textToRead, input.narratorVoice);
         } catch (err) {
             console.error("Narration failed", err);
@@ -132,20 +132,18 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
         narrationManager.onEnded = () => {
             setIsNarrating(false);
             if (input.mode === 'sleep' && story) {
-                // Auto-advance logic
                 if (currentPartIndex < story.parts.length - 1) {
                     setTimeout(() => {
                         setCurrentPartIndex(prev => prev + 1);
-                    }, 1500); // 1.5s pause between chapters
+                    }, 1500);
                 }
             }
         };
     }, [input.mode, story, currentPartIndex]);
 
-    // Effect to auto-play when part index changes in sleep mode
+    // Auto-play in sleep mode
     useEffect(() => {
         if (input.mode === 'sleep' && phase === 'reading' && story) {
-            // Wait a bit then play
             const timer = setTimeout(() => {
                  if (!narrationManager.state.isPlaying) {
                      playNarration();
@@ -157,7 +155,7 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
 
     const generateAvatar = useCallback(async () => {
         if (!isOnline) {
-            alert("✨ Halt Citizen! You must be connected to the Multiverse to spark a new Avatar.");
+            alert("✨ Connection required to spark a new Avatar.");
             return;
         }
         const name = input.mode === 'classic' ? input.heroName : (input.mode === 'sleep' ? input.heroName : input.madlibs.animal);
@@ -181,7 +179,7 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
 
     const generateStory = useCallback(async () => {
         if (!isOnline) {
-            alert("📜 The Memory Jar contains your past tales, but new adventures require a connection to the Infinite Library.");
+            alert("📜 History is available, but new tales require a connection.");
             return;
         }
         if (!(await validateApiKey())) return;
@@ -191,7 +189,6 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
             const id = await storageManager.saveStory(data, input.heroAvatarUrl);
             setCurrentStoryId(id);
             
-            // Refresh history
             const newHistory = await storageManager.getAllStories();
             setHistory(newHistory);
             
@@ -228,7 +225,7 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
                 if (isCurrent) soundManager.playSparkle();
             }
         } catch (error: any) {
-             console.error(`Scene generation failed for index ${index}`, error);
+             console.error(`Scene generation failed`, error);
              if (isCurrent && error.message?.includes("404")) setShowApiKeyDialog(true);
         } finally {
             if (isCurrent) setIsSceneLoading(false);
@@ -292,8 +289,6 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
         setCurrentStoryId(null);
         setScenes({});
         setCurrentPartIndex(0);
-        // We do NOT clear the input state fully on reset to allow easy re-generation with tweaks
-        // But we clear context specific things
         setInput(prev => ({ ...prev, sequelContext: undefined }));
     }, [stopNarration]);
 

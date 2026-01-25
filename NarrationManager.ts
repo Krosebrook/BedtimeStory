@@ -10,6 +10,7 @@ import { storageManager } from "./lib/StorageManager";
 /**
  * Singleton class managing Text-to-Speech generation and playback.
  * Handles Web Audio API context, buffer management, and playback rate control.
+ * Strictly adheres to raw PCM 24kHz Mono decoding for Gemini TTS output.
  */
 export class NarrationManager {
   private audioCtx: AudioContext | null = null;
@@ -67,37 +68,37 @@ export class NarrationManager {
   }
 
   /**
-   * Helper to decode Base64 string to Uint8Array.
+   * Helper to decode Base64 string to Uint8Array manually as per guidelines.
    */
-  private decodeBase64(base64: string): Uint8Array {
+  private decode(base64: string): Uint8Array {
     const binaryString = atob(base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
       bytes[i] = binaryString.charCodeAt(i);
     }
     return bytes;
   }
 
   /**
-   * Helper to decode raw PCM/Audio data into an AudioBuffer.
+   * Helper to decode raw PCM bytes into an AudioBuffer.
+   * Gemini returns raw 16-bit PCM at 24000Hz.
    */
-  private async decodeAudioData(data: ArrayBuffer): Promise<AudioBuffer> {
-    // Note: If using raw PCM from Gemini, we construct it manually. 
-    // If saving/loading ArrayBuffer from IDB, it is the same raw bytes.
-    // The previous implementation assumed Gemini output was Int16 PCM at 24kHz.
-    
-    // We clone the buffer because creating a typed array might detach it if we aren't careful, 
-    // or if we need to reuse the source buffer.
-    const dataInt16 = new Int16Array(data.slice(0));
-    
-    // Ensure Context exists
-    if (!this.audioCtx) this.init();
-    
-    const buffer = this.audioCtx!.createBuffer(1, dataInt16.length, 24000);
-    const channelData = buffer.getChannelData(0);
-    // Convert Int16 PCM to Float32 [-1.0, 1.0]
-    for (let i = 0; i < dataInt16.length; i++) {
-      channelData[i] = dataInt16[i] / 32768.0;
+  private async decodeAudioData(
+    data: Uint8Array,
+    ctx: AudioContext,
+    sampleRate: number = 24000,
+    numChannels: number = 1
+  ): Promise<AudioBuffer> {
+    const dataInt16 = new Int16Array(data.buffer);
+    const frameCount = dataInt16.length / numChannels;
+    const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
+
+    for (let channel = 0; channel < numChannels; channel++) {
+      const channelData = buffer.getChannelData(channel);
+      for (let i = 0; i < frameCount; i++) {
+        channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+      }
     }
     return buffer;
   }
@@ -105,15 +106,12 @@ export class NarrationManager {
   /**
    * Fetches TTS audio from Gemini API or retrieves from persistent cache.
    * Automatically starts playback upon success.
-   * 
-   * @param text - The text to narrate.
-   * @param voiceName - The specific voice capability to use.
    */
   async fetchNarration(text: string, voiceName: string = 'Kore'): Promise<void> {
     this.init();
     
-    // Create a cache key that includes the voice
-    const cacheKey = `${voiceName}:${text.substring(0, 50)}_${text.length}`; // Simplified hash key
+    // Create a cache key that includes the voice and text snippet
+    const cacheKey = `v1:${voiceName}:${text.substring(0, 30)}_${text.length}`;
     
     // 1. Check in-memory cache
     if (this.memoryCache.has(cacheKey)) {
@@ -122,22 +120,22 @@ export class NarrationManager {
       return;
     }
 
-    // 2. Check offline storage (IndexedDB)
+    // 2. Check persistent IndexedDB cache (Offline support)
     try {
         const cachedAudio = await storageManager.getAudio(cacheKey);
         if (cachedAudio) {
-            console.log("Playing from offline cache");
-            const buffer = await this.decodeAudioData(cachedAudio);
+            const bytes = new Uint8Array(cachedAudio);
+            const buffer = await this.decodeAudioData(bytes, this.audioCtx!);
             this.memoryCache.set(cacheKey, buffer);
             this.currentBuffer = buffer;
             this.play();
             return;
         }
     } catch (e) {
-        console.warn("Offline audio cache miss/error", e);
+        console.warn("Offline audio cache miss", e);
     }
 
-    // 3. Fetch from API
+    // 3. Fetch from Gemini API
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     try {
       const response = await ai.models.generateContent({
@@ -155,27 +153,27 @@ export class NarrationManager {
 
       const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
       if (base64Audio) {
-        const bytes = this.decodeBase64(base64Audio);
+        const bytes = this.decode(base64Audio);
         
-        // Save to offline storage asynchronously
-        storageManager.saveAudio(cacheKey, bytes.buffer).catch(err => console.error("Failed to save audio", err));
+        // Persist for offline use
+        storageManager.saveAudio(cacheKey, bytes.buffer).catch(err => console.error("Save audio failed", err));
         
-        const buffer = await this.decodeAudioData(bytes.buffer);
+        const buffer = await this.decodeAudioData(bytes, this.audioCtx!);
         this.memoryCache.set(cacheKey, buffer);
         this.currentBuffer = buffer;
         this.play();
       }
     } catch (error) {
-      console.error("TTS failed", error);
+      console.error("TTS synthesis failed", error);
     }
   }
 
   /**
-   * Starts playback of the current buffer.
+   * Starts or resumes playback of the current buffer.
    */
   play() {
     if (!this.currentBuffer || !this.audioCtx) return;
-    this.stop(); // Stop any existing source
+    this.stop(); // Clear any active source
 
     this.source = this.audioCtx.createBufferSource();
     this.source.buffer = this.currentBuffer;
@@ -191,10 +189,14 @@ export class NarrationManager {
     this.source.onended = () => {
         if (!this.isPaused) {
             if (this.onEnded) this.onEnded();
+            this.stop();
         }
     };
   }
 
+  /**
+   * Pauses the current narration, tracking the position for resume.
+   */
   pause() {
     if (!this.source || !this.audioCtx || this.isPaused) return;
     this.pausedAt = (this.audioCtx.currentTime - this.startTime) * this.playbackRate;
@@ -202,15 +204,19 @@ export class NarrationManager {
     this.isPaused = true;
   }
 
+  /**
+   * Completely stops narration and resets positions.
+   */
   stop() {
     if (this.source) {
       this.source.onended = null;
-      this.source.stop();
+      try { this.source.stop(); } catch (e) {}
       this.source = null;
     }
-    this.isPaused = false;
-    this.pausedAt = 0;
-    this.startTime = 0;
+    if (!this.isPaused) {
+        this.pausedAt = 0;
+        this.startTime = 0;
+    }
   }
 
   getCurrentTime(): number {
