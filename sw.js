@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-const CACHE_NAME = 'bedtime-chronicles-v4';
+const CACHE_NAME = 'bedtime-chronicles-v5'; // Bump version for UI/Length updates
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -43,10 +43,10 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Skip POST requests (Gemini API) - these are handled by IDB in the app
+  // Skip POST requests (Gemini API)
   if (event.request.method !== 'GET') return;
 
-  // Handle navigation requests (SPA)
+  // Handle navigation requests (SPA) - always serve index.html if offline
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => caches.match('/index.html'))
@@ -54,12 +54,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Stale-While-Revalidate for static assets and CDN dependencies
+  // Caching Strategy: Stale-While-Revalidate
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const networked = fetch(event.request)
         .then((response) => {
-          // Only cache valid basic responses or specific CDN responses
           const isSuccessful = response.status === 200;
           const isCdn = url.hostname.includes('cdn.tailwindcss.com') || 
                         url.hostname.includes('fonts.gstatic.com') ||

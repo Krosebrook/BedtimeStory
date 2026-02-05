@@ -17,24 +17,25 @@ export class AIClient {
     
     let lengthInstructions = "";
     if (input.mode === 'sleep') {
-        // Bedtime mode is now roughly 6x longer than medium classic mode.
+        // Bedtime mode is now 6x longer.
         lengthInstructions = `
-        LENGTH: Extended Slumber Edition (6x Normal Length). 
-        WORD COUNT: Aim for approx 4500-5000 words total.
-        STRUCTURE: Divide the story into 10-12 distinct parts to create a long, immersive journey.
-        PACING: Extremely slow. Use repetitive patterns and long, flowy descriptions to induce sleep.
+        LENGTH: ULTIMATE SLUMBER EDITION (6x Normal Length). 
+        WORD COUNT: Total story word count MUST be between 5,000 and 7,000 words.
+        STRUCTURE: Divide the story into 15-18 distinct, very long parts to ensure a deep, sustained journey to sleep.
+        PACING: Hypnotically slow. Use extensive descriptions of environments, sensations, and peaceful transitions. 
+        REPETITION: Use rhythmic, calming repetitions to induce relaxation.
         `;
     } else {
         switch (input.storyLength) {
             case 'short':
-                lengthInstructions = "LENGTH: approx 300 words. 3 parts.";
+                lengthInstructions = "LENGTH: approx 400 words. 3 parts.";
                 break;
             case 'long':
-                lengthInstructions = "LENGTH: approx 1500 words. 5-6 parts.";
+                lengthInstructions = "LENGTH: approx 2000 words. 6-8 parts.";
                 break;
             case 'medium':
             default:
-                lengthInstructions = "LENGTH: approx 800 words. 3-4 parts.";
+                lengthInstructions = "LENGTH: approx 1000 words. 4-5 parts.";
                 break;
         }
     }
@@ -43,35 +44,36 @@ export class AIClient {
     if (input.mode === 'sleep') {
         const { subMode, texture, sound, scent, theme } = input.sleepConfig;
         prompt = `
-        Create an IMMERSIVE and EXTENDED soothing bedtime story.
+        Create a MASTERPIECE of soothing bedtime storytelling.
         HERO: ${input.heroName}.
         MODE: ${subMode}. THEME: ${theme}.
-        SENSORY ANCHORS: "${texture}", "${sound}", "${scent}".
+        SENSORY ANCHORS TO WEAVE IN: "${texture}", "${sound}", "${scent}".
         
-        SLEEP RULES:
-        1. NO CONFLICT. Focus on gentle exploration (e.g., drifting on a cloud, walking through a field of whispering grass).
-        2. Tone: Hypnotic, repetitive, and peaceful.
+        SLEEP HYPNOSIS RULES:
+        1. ZERO CONFLICT. The hero is exploring, resting, or observing beautiful, quiet things.
+        2. Tone: Dreamy, lyrical, and incredibly calm.
         3. ${lengthInstructions}
-        4. NO CHOICES. 
+        4. NO CHOICES. This is a linear journey to sleep.
         `;
     } else if (input.mode === 'classic') {
       prompt = `
-        Adventure story for ${input.heroName}. Power: ${input.heroPower}. 
+        Epic adventure for ${input.heroName}. Power: ${input.heroPower}. 
         Setting: ${input.setting}. Sidekick: ${input.sidekick}. Problem: ${input.problem}.
         ${lengthInstructions}
-        Provide 3 choices at the end of each part except the last.
+        Provide 3 meaningful choices at the end of each part except the last one.
       `;
     } else {
       prompt = `
-        Mad Libs Story. Keywords: ${Object.values(input.madlibs).join(', ')}.
+        Whimsical Mad Libs Story. Keywords: ${Object.values(input.madlibs).join(', ')}.
         ${lengthInstructions}
-        Funny and whimsical tone. Provide choices.
+        Style: Silly, unexpected, and high energy. Provide 3 choices for the hero.
       `;
     }
 
     prompt += `
-      OUTPUT: Valid JSON. title, parts(array of {text, choices, partIndex}), vocabWord{word, definition}, joke, lesson, tomorrowHook, rewardBadge{emoji, title, description}.
-      IMPORTANT: For sleep mode, parts array MUST have 10-12 items.
+      OUTPUT FORMAT: JSON ONLY. 
+      SCHEMA: title (string), parts (array of {text (string, long segments), choices (array of string or empty), partIndex (integer)}), vocabWord {word, definition}, joke, lesson, tomorrowHook, rewardBadge {emoji, title, description}.
+      IMPORTANT: For sleep mode, parts array MUST have 15-18 items to accommodate the 6x length.
     `;
 
     const result = await ai.models.generateContent({
@@ -119,7 +121,7 @@ export class AIClient {
 
   static async generateAvatar(heroName: string, heroPower: string): Promise<string | null> {
     const ai = this.getAI();
-    const prompt = `Whimsical storybook portrait of ${heroName} with ${heroPower}. Square, high quality.`;
+    const prompt = `A professional children's book illustration portrait of ${heroName} who has the power of ${heroPower}. High-contrast, friendly, vibrant style. Close-up on the hero's face.`;
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: { parts: [{ text: prompt }] },
@@ -130,7 +132,7 @@ export class AIClient {
 
   static async generateSceneIllustration(context: string, heroDescription: string): Promise<string | null> {
     const ai = this.getAI();
-    const prompt = `Children's book scene: ${context.substring(0, 300)}. Hero: ${heroDescription}. Whimsical style.`;
+    const prompt = `Vibrant children's storybook scene: ${context.substring(0, 400)}. Featuring: ${heroDescription}. Whimsical, magical atmosphere.`;
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: { parts: [{ text: prompt }] },

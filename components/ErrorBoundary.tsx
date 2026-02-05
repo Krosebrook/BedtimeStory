@@ -18,9 +18,10 @@ interface State {
 
 /**
  * ErrorBoundary component to catch rendering errors and show a comic-themed fallback.
- * Fixed by explicitly extending React.Component to resolve inheritance member access issues (props, state, setState).
+ * Fixed by using explicit React.Component typing to ensure state and props are correctly inherited.
  */
 export class ErrorBoundary extends React.Component<Props, State> {
+  // Use class fields for initial state to avoid constructor resolution issues in some environments
   public state: State = {
     hasError: false,
     error: null,
@@ -35,8 +36,10 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   public render() {
+    // Check if an error has been caught in the lifecycle
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
+      
       return (
         <div className="flex flex-col items-center justify-center min-h-[50vh] p-8 text-center bg-slate-900 text-white border-4 border-red-500 rounded-xl m-4 shadow-[8px_8px_0px_rgba(255,0,0,0.5)]">
           <h2 className="text-4xl font-comic text-red-500 mb-4 animate-bounce">💥 POW! SPLAT!</h2>
