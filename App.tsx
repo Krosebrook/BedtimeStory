@@ -89,6 +89,8 @@ const App: React.FC = () => {
                         <Setup 
                             input={input} 
                             onChange={handleInputChange} 
+                            // Fix: Added handleMadLibChange to Setup props
+                            handleMadLibChange={handleMadLibChange}
                             onLaunch={generateStory} 
                             onGenerateAvatar={generateAvatar}
                             isLoading={isLoading} 

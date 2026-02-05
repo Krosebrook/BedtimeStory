@@ -15,6 +15,8 @@ import { soundManager } from './SoundManager';
 interface SetupProps {
     input: StoryState;
     onChange: (field: keyof StoryState, value: any) => void;
+    // Fix: Added handleMadLibChange to SetupProps interface
+    handleMadLibChange: (field: keyof MadLibState, value: string) => void;
     onLaunch: () => void;
     onGenerateAvatar: () => void;
     isLoading: boolean;
@@ -109,7 +111,22 @@ const GeminiWizardStep: React.FC<{ prompt: string; children: React.ReactNode; on
     </motion.div>
 );
 
-export const Setup: React.FC<SetupProps> = ({ input, onChange, onLaunch, onGenerateAvatar, isLoading, isAvatarLoading, isOnline, history, onLoadHistory, handleSleepConfigChange, onDeleteHistory, onPrepareSequel }) => {
+export const Setup: React.FC<SetupProps> = ({ 
+    input, 
+    onChange, 
+    // Fix: Destructured handleMadLibChange from props
+    handleMadLibChange,
+    onLaunch, 
+    onGenerateAvatar, 
+    isLoading, 
+    isAvatarLoading, 
+    isOnline, 
+    history, 
+    onLoadHistory, 
+    handleSleepConfigChange, 
+    onDeleteHistory, 
+    onPrepareSequel 
+}) => {
     const [wizardStep, setWizardStep] = useState(0);
     const isReady = input.mode === 'sleep' ? !!input.heroName : (input.mode === 'madlibs' ? Object.values(input.madlibs).every(v => (v as string).length > 0) : (!!input.heroName && !!input.setting));
 
@@ -122,6 +139,39 @@ export const Setup: React.FC<SetupProps> = ({ input, onChange, onLaunch, onGener
         { id: 'Charon', icon: '🐻', label: 'Deep' },
         { id: 'Fenrir', icon: '🐺', label: 'Bold' }
     ];
+
+    const lengths: { id: StoryLength, label: string, icon: string }[] = [
+        { id: 'short', label: 'Short', icon: '⚡' },
+        { id: 'medium', label: 'Medium', icon: '📖' },
+        { id: 'long', label: 'Long', icon: '📜' },
+        { id: 'eternal', label: 'Eternal', icon: '♾️' }
+    ];
+
+    const ambientThemes: { id: AmbientTheme, label: string, icon: string, sound: 'space' | 'rain' | 'forest' | 'magic' }[] = [
+        { id: 'space', label: 'Cosmic Hum', icon: '🛰️', sound: 'space' },
+        { id: 'rain', label: 'Gentle Rain', icon: '🌧️', sound: 'rain' },
+        { id: 'forest', label: 'Forest Ambiance', icon: '🌲', sound: 'forest' },
+        { id: 'magic', label: 'Magic Sparkle', icon: '✨', sound: 'magic' }
+    ];
+
+    const sleepThemes = [
+        { id: 'Cloud Kingdom', label: 'Cloud Kingdom', icon: '☁️' },
+        { id: 'Starry Space', label: 'Starry Space', icon: '🚀' },
+        { id: 'Magic Forest', label: 'Magic Forest', icon: '🍄' },
+        { id: 'Deep Ocean', label: 'Deep Ocean', icon: '🐙' },
+        { id: 'Moonlight Meadow', label: 'Moonlight Meadow', icon: '🌙' }
+    ];
+
+    useEffect(() => {
+        // Toggle ambient sound on setup mount or theme change
+        if (input.sleepConfig.ambientTheme !== 'auto') {
+            const theme = ambientThemes.find(t => t.id === input.sleepConfig.ambientTheme);
+            if (theme) soundManager.playAmbient(theme.sound);
+        } else {
+            soundManager.stopAmbient();
+        }
+        return () => soundManager.stopAmbient();
+    }, [input.sleepConfig.ambientTheme]);
 
     return (
         <main className="min-h-screen w-full bg-slate-950 flex flex-col items-center py-6 md:py-10 px-4 md:px-8 overflow-y-auto" role="main">
@@ -154,12 +204,28 @@ export const Setup: React.FC<SetupProps> = ({ input, onChange, onLaunch, onGener
                                     <input autoFocus value={input.setting} onChange={e => onChange('setting', e.target.value)} placeholder="Place name..." className="w-full text-center text-3xl md:text-5xl font-comic border-b-4 border-purple-500 focus:outline-none bg-transparent" aria-label="Story Setting" />
                                 </GeminiWizardStep>}
                                 {wizardStep === 2 && <div className="space-y-6 w-full text-center">
-                                    <h3 className="font-comic text-2xl md:text-3xl uppercase mb-4">Mission Finalized!</h3>
+                                    <h3 className="font-comic text-2xl md:text-3xl uppercase mb-4 text-blue-600">Mission Parameters</h3>
                                     <div className="p-4 md:p-6 bg-slate-50 border-4 border-dashed border-slate-300 rounded-2xl">
                                         <p className="font-comic text-xl md:text-2xl mb-2">The Hero: <span className="text-blue-600 underline decoration-blue-200">{input.heroName}</span></p>
                                         <p className="font-comic text-xl md:text-2xl">The World: <span className="text-purple-600 underline decoration-purple-200">{input.setting}</span></p>
                                     </div>
-                                    <button onClick={() => { setWizardStep(0); soundManager.playChoice(); }} className="text-sm md:text-base text-slate-400 hover:text-blue-500 underline decoration-dotted transition-colors">Change Adventure Details</button>
+                                    
+                                    <div className="mt-8">
+                                        <label className="font-comic text-xs uppercase text-slate-400 block mb-3 tracking-widest">Story Length</label>
+                                        <div className="flex justify-center gap-2">
+                                            {lengths.map(l => (
+                                                <button 
+                                                    key={l.id} 
+                                                    onClick={() => { onChange('storyLength', l.id); soundManager.playChoice(); }}
+                                                    className={`px-4 py-2 rounded-xl border-2 font-comic transition-all ${input.storyLength === l.id ? 'bg-blue-100 border-blue-500 text-blue-700 scale-105' : 'bg-white border-slate-200 text-slate-400 opacity-60'}`}
+                                                >
+                                                    <span className="mr-1">{l.icon}</span> {l.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <button onClick={() => { setWizardStep(0); soundManager.playChoice(); }} className="mt-6 text-sm md:text-base text-slate-400 hover:text-blue-500 underline decoration-dotted transition-colors">Start Over</button>
                                 </div>}
                             </div>
                         )}
@@ -170,39 +236,87 @@ export const Setup: React.FC<SetupProps> = ({ input, onChange, onLaunch, onGener
                                     <label className="font-comic text-indigo-700 text-lg md:text-xl block mb-2">Who is drifting off to sleep?</label>
                                     <input value={input.heroName} onChange={e => onChange('heroName', e.target.value)} placeholder="Enter name..." className="w-full border-b-4 border-indigo-200 p-2 md:p-4 text-center text-2xl md:text-4xl font-serif text-indigo-900 focus:border-indigo-500 outline-none bg-transparent placeholder-indigo-100" />
                                 </div>
+                                
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-4">
-                                        <h4 className="font-comic text-xs md:text-sm uppercase text-indigo-400 tracking-widest border-l-2 border-indigo-400 pl-2">Dream Weaver Anchors</h4>
+                                        <h4 className="font-comic text-xs md:text-sm uppercase text-indigo-400 tracking-widest border-l-2 border-indigo-400 pl-2">Dream Weaver Anchors (Parent's Touch)</h4>
                                         <div className="space-y-3">
-                                            <input value={input.sleepConfig.texture} onChange={e => handleSleepConfigChange('texture', e.target.value)} placeholder="A soft blanket..." className="w-full p-3 border-2 border-indigo-100 rounded-xl focus:border-indigo-500 focus:bg-indigo-50/30 outline-none transition-all" aria-label="Soft texture" />
-                                            <input value={input.sleepConfig.sound} onChange={e => handleSleepConfigChange('sound', e.target.value)} placeholder="Quiet rain..." className="w-full p-3 border-2 border-indigo-100 rounded-xl focus:border-indigo-500 focus:bg-indigo-50/30 outline-none transition-all" aria-label="Quiet sound" />
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Texture (Soft like...)</label>
+                                                <input value={input.sleepConfig.texture} onChange={e => handleSleepConfigChange('texture', e.target.value)} placeholder="A soft cotton cloud..." className="w-full p-3 border-2 border-indigo-100 rounded-xl focus:border-indigo-500 focus:bg-indigo-50/30 outline-none transition-all" aria-label="Soft texture" />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Sound (Gentle as...)</label>
+                                                <input value={input.sleepConfig.sound} onChange={e => handleSleepConfigChange('sound', e.target.value)} placeholder="Whispering leaves..." className="w-full p-3 border-2 border-indigo-100 rounded-xl focus:border-indigo-500 focus:bg-indigo-50/30 outline-none transition-all" aria-label="Quiet sound" />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Scent (Sweet like...)</label>
+                                                <input value={input.sleepConfig.scent} onChange={e => handleSleepConfigChange('scent', e.target.value)} placeholder="Freshly baked cookies..." className="w-full p-3 border-2 border-indigo-100 rounded-xl focus:border-indigo-500 focus:bg-indigo-50/30 outline-none transition-all" aria-label="Scent" />
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="space-y-4">
-                                        <h4 className="font-comic text-xs md:text-sm uppercase text-indigo-400 tracking-widest border-l-2 border-indigo-400 pl-2">Dreamscape Setting</h4>
-                                        <select value={input.sleepConfig.theme} onChange={e => handleSleepConfigChange('theme', e.target.value)} className="w-full p-3 border-2 border-indigo-100 rounded-xl bg-white outline-none focus:border-indigo-500 cursor-pointer" aria-label="Select Dreamscape Theme">
-                                            <option>Cloud Kingdom</option>
-                                            <option>Starry Space</option>
-                                            <option>Magic Forest</option>
-                                            <option>Deep Ocean</option>
-                                            <option>Moonlight Meadow</option>
-                                        </select>
+                                        <h4 className="font-comic text-xs md:text-sm uppercase text-indigo-400 tracking-widest border-l-2 border-indigo-400 pl-2">Dreamscape Selection</h4>
+                                        <div className="grid grid-cols-1 gap-2">
+                                            {sleepThemes.map(t => (
+                                                <button 
+                                                    key={t.id} 
+                                                    onClick={() => { handleSleepConfigChange('theme', t.id); soundManager.playChoice(); }}
+                                                    className={`p-3 rounded-xl border-2 flex items-center gap-3 transition-all ${input.sleepConfig.theme === t.id ? 'bg-indigo-600 text-white border-black shadow-[4px_4px_0px_black] scale-[1.02]' : 'bg-white border-indigo-50 text-indigo-900 opacity-70 hover:opacity-100'}`}
+                                                >
+                                                    <span className="text-2xl">{t.icon}</span>
+                                                    <span className="font-comic text-lg uppercase tracking-wide">{t.label}</span>
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="bg-indigo-50 p-3 md:p-4 rounded-xl border-2 border-indigo-100 flex items-center gap-3">
-                                    <span className="text-2xl">💤</span>
-                                    <p className="text-[10px] md:text-xs text-indigo-500 font-serif leading-tight">Bedtime mode narratives are now 6x longer (15-18 chapters) for a deeply immersive path to sleep.</p>
+
+                                <div className="mt-4">
+                                    <label className="font-comic text-xs uppercase text-indigo-400 block mb-3 tracking-widest text-center">Ambient Soundscape</label>
+                                    <div className="flex flex-wrap justify-center gap-3">
+                                        <button 
+                                            onClick={() => handleSleepConfigChange('ambientTheme', 'auto')}
+                                            className={`px-4 py-2 rounded-xl border-2 font-comic transition-all ${input.sleepConfig.ambientTheme === 'auto' ? 'bg-slate-200 border-black' : 'bg-white border-slate-100 opacity-60'}`}
+                                        >
+                                            🔇 Mute
+                                        </button>
+                                        {ambientThemes.map(t => (
+                                            <button 
+                                                key={t.id} 
+                                                onClick={() => { handleSleepConfigChange('ambientTheme', t.id); soundManager.playChoice(); }}
+                                                className={`px-4 py-2 rounded-xl border-2 font-comic transition-all flex items-center gap-2 ${input.sleepConfig.ambientTheme === t.id ? 'bg-indigo-100 border-indigo-500 text-indigo-700 scale-105 shadow-md' : 'bg-white border-slate-100 opacity-60'}`}
+                                            >
+                                                <span>{t.icon}</span> {t.label}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         )}
                         
                         {input.mode === 'madlibs' && (
                             <div className="font-serif text-lg md:text-2xl leading-relaxed text-center py-4 md:py-6 max-w-2xl mx-auto animate-in zoom-in duration-500">
-                                <p>Once, a <MadLibField label="Adjective" value={input.madlibs.adjective} onChange={v => onChange('madlibs', { ...input.madlibs, adjective: v })} suggestions={["brave", "tiny", "glowing", "invisible"]} /> explorer found a 
-                                <MadLibField label="Place" value={input.madlibs.place} onChange={v => onChange('madlibs', { ...input.madlibs, place: v })} suggestions={["Cave", "Cloud City", "Candy Lab"]} />.
-                                They carried a <MadLibField label="Food" value={input.madlibs.food} onChange={v => onChange('madlibs', { ...input.madlibs, food: v })} suggestions={["Pizza", "Marshmallow", "Taco"]} /> when a 
-                                <MadLibField label="Animal" value={input.madlibs.animal} onChange={v => onChange('madlibs', { ...input.madlibs, animal: v })} suggestions={["Hamster", "Dragon", "Penguin"]} /> yelled 
-                                <MadLibField label="Silly Word" value={input.madlibs.sillyWord} onChange={v => onChange('madlibs', { ...input.madlibs, sillyWord: v })} suggestions={["Bazinga!", "Sploot!", "Zoinks!"]} />!</p>
+                                <p>Once, a <MadLibField label="Adjective" value={input.madlibs.adjective} onChange={v => handleMadLibChange('adjective', v)} suggestions={["brave", "tiny", "glowing", "invisible"]} /> explorer found a 
+                                <MadLibField label="Place" value={input.madlibs.place} onChange={v => handleMadLibChange('place', v)} suggestions={["Cave", "Cloud City", "Candy Lab"]} />.
+                                They carried a <MadLibField label="Food" value={input.madlibs.food} onChange={v => handleMadLibChange('food', v)} suggestions={["Pizza", "Marshmallow", "Taco"]} /> when a 
+                                <MadLibField label="Animal" value={input.madlibs.animal} onChange={v => handleMadLibChange('animal', v)} suggestions={["Hamster", "Dragon", "Penguin"]} /> yelled 
+                                <MadLibField label="Silly Word" value={input.madlibs.sillyWord} onChange={v => handleMadLibChange('sillyWord', v)} suggestions={["Bazinga!", "Sploot!", "Zoinks!"]} />!</p>
+                                
+                                <div className="mt-12">
+                                    <label className="font-comic text-xs uppercase text-slate-400 block mb-3 tracking-widest">Chaos Level (Length)</label>
+                                    <div className="flex justify-center gap-2">
+                                        {lengths.map(l => (
+                                            <button 
+                                                key={l.id} 
+                                                onClick={() => { onChange('storyLength', l.id); soundManager.playChoice(); }}
+                                                className={`px-4 py-2 rounded-xl border-2 font-comic transition-all ${input.storyLength === l.id ? 'bg-orange-100 border-orange-500 text-orange-700 scale-105' : 'bg-white border-slate-200 text-slate-400 opacity-60'}`}
+                                            >
+                                                <span className="mr-1">{l.icon}</span> {l.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>

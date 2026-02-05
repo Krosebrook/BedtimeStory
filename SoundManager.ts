@@ -15,7 +15,7 @@ class SoundManager {
 
   private init() {
     if (!this.ctx) {
-      this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 44100 });
     }
     if (this.ctx.state === 'suspended') {
       this.ctx.resume();
@@ -73,34 +73,51 @@ class SoundManager {
   }
 
   playAmbient(mode: 'space' | 'rain' | 'forest' | 'magic') {
-      if (this.muted || this.isAmbientPlaying) return;
       this.init();
+      if (this.muted) return;
 
-      // Stop existing
-      this.stopAmbient();
+      // Stop existing if different mode, or if already playing just return
+      if (this.isAmbientPlaying) {
+          this.stopAmbient();
+      }
 
       let noiseType: 'brown' | 'pink' | 'white' = 'pink';
       let filterFreq = 1000;
-      let q = 0;
+      let filterType: BiquadFilterType = 'lowpass';
+      let q = 1;
+      let modulationFreq = 0.1;
+      let modulationDepth = 200;
 
       // Configure based on theme
       switch(mode) {
-          case 'space': // Deep drone
+          case 'space': // Cosmic Hum
               noiseType = 'brown';
-              filterFreq = 200;
+              filterFreq = 150;
+              modulationFreq = 0.05;
+              modulationDepth = 50;
               break;
-          case 'rain': // White/Pink noise filtered
-              noiseType = 'pink';
-              filterFreq = 800;
-              break;
-          case 'forest': // Higher pitched wind
-              noiseType = 'pink';
-              filterFreq = 3000;
-              break;
-          case 'magic': // Ethereal
+          case 'rain': // Gentle Rain
               noiseType = 'pink';
               filterFreq = 1200;
-              q = 10; // Resonant
+              filterType = 'bandpass';
+              q = 0.5;
+              modulationFreq = 0.5;
+              modulationDepth = 400;
+              break;
+          case 'forest': // Forest Ambiance (wind + leaves)
+              noiseType = 'pink';
+              filterFreq = 2500;
+              filterType = 'lowpass';
+              modulationFreq = 0.2;
+              modulationDepth = 1000;
+              break;
+          case 'magic': // Ethereal
+              noiseType = 'white';
+              filterFreq = 1500;
+              filterType = 'bandpass';
+              q = 12; // Resonant
+              modulationFreq = 0.15;
+              modulationDepth = 500;
               break;
       }
 
@@ -112,16 +129,16 @@ class SoundManager {
 
       // Create filter to shape the noise
       const filter = this.ctx!.createBiquadFilter();
-      filter.type = mode === 'magic' ? 'bandpass' : 'lowpass';
+      filter.type = filterType;
       filter.frequency.value = filterFreq;
       filter.Q.value = q;
 
       // LFO for movement (makes it feel organic)
       const lfo = this.ctx!.createOscillator();
       lfo.type = 'sine';
-      lfo.frequency.value = 0.1; // Slow 10s cycle
+      lfo.frequency.value = modulationFreq; 
       const lfoGain = this.ctx!.createGain();
-      lfoGain.gain.value = 200; // Modulate filter freq by +/- 200Hz
+      lfoGain.gain.value = modulationDepth;
       lfo.connect(lfoGain);
       lfoGain.connect(filter.frequency);
       lfo.start();
@@ -137,7 +154,7 @@ class SoundManager {
       this.isAmbientPlaying = true;
 
       // Fade in
-      this.ambientGain.gain.linearRampToValueAtTime(0.03, this.ctx!.currentTime + 3);
+      this.ambientGain.gain.linearRampToValueAtTime(0.04, this.ctx!.currentTime + 3);
   }
 
   stopAmbient() {
@@ -145,12 +162,12 @@ class SoundManager {
           // Fade out
           const now = this.ctx!.currentTime;
           this.ambientGain.gain.setValueAtTime(this.ambientGain.gain.value, now);
-          this.ambientGain.gain.exponentialRampToValueAtTime(0.0001, now + 2);
+          this.ambientGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.5);
           
           const oldSource = this.ambientSource;
           setTimeout(() => {
               try { oldSource.stop(); } catch(e) {}
-          }, 2000);
+          }, 1600);
           
           this.ambientSource = null;
           this.ambientGain = null;

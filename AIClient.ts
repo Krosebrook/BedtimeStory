@@ -17,25 +17,33 @@ export class AIClient {
     
     let lengthInstructions = "";
     if (input.mode === 'sleep') {
-        // Bedtime mode is now 6x longer.
+        // Bedtime mode remains long for sleep induction, adjusted slightly by user length choice if relevant
+        const multiplier = input.storyLength === 'short' ? 0.7 : (input.storyLength === 'long' ? 1.5 : 1);
+        const partsCount = Math.floor(15 * multiplier);
+        const wordCountMin = Math.floor(4000 * multiplier);
+        const wordCountMax = Math.floor(6000 * multiplier);
+        
         lengthInstructions = `
-        LENGTH: ULTIMATE SLUMBER EDITION (6x Normal Length). 
-        WORD COUNT: Total story word count MUST be between 5,000 and 7,000 words.
-        STRUCTURE: Divide the story into 15-18 distinct, very long parts to ensure a deep, sustained journey to sleep.
+        LENGTH: ULTIMATE SLUMBER EDITION. 
+        WORD COUNT: Total story word count MUST be between ${wordCountMin} and ${wordCountMax} words.
+        STRUCTURE: Divide the story into ${partsCount} distinct, very long parts to ensure a deep, sustained journey to sleep.
         PACING: Hypnotically slow. Use extensive descriptions of environments, sensations, and peaceful transitions. 
         REPETITION: Use rhythmic, calming repetitions to induce relaxation.
         `;
     } else {
         switch (input.storyLength) {
             case 'short':
-                lengthInstructions = "LENGTH: approx 400 words. 3 parts.";
+                lengthInstructions = "LENGTH: approx 400 words. 3-4 parts. Fast-paced, focused narrative.";
                 break;
             case 'long':
-                lengthInstructions = "LENGTH: approx 2000 words. 6-8 parts.";
+                lengthInstructions = "LENGTH: approx 2500 words. 8-10 parts. Deep world-building, sub-plots, and detailed descriptions.";
+                break;
+            case 'eternal':
+                lengthInstructions = "LENGTH: Maximum complexity. approx 4000 words. 12-15 parts. Epic scale, extensive dialogue and atmosphere.";
                 break;
             case 'medium':
             default:
-                lengthInstructions = "LENGTH: approx 1000 words. 4-5 parts.";
+                lengthInstructions = "LENGTH: approx 1200 words. 5-7 parts. Balanced pacing and detail.";
                 break;
         }
     }
@@ -51,7 +59,7 @@ export class AIClient {
         
         SLEEP HYPNOSIS RULES:
         1. ZERO CONFLICT. The hero is exploring, resting, or observing beautiful, quiet things.
-        2. Tone: Dreamy, lyrical, and incredibly calm.
+        2. Tone: Dreamy, lyrical, and incredibly calm. Focus on the physical sensations of comfort.
         3. ${lengthInstructions}
         4. NO CHOICES. This is a linear journey to sleep.
         `;
@@ -73,7 +81,7 @@ export class AIClient {
     prompt += `
       OUTPUT FORMAT: JSON ONLY. 
       SCHEMA: title (string), parts (array of {text (string, long segments), choices (array of string or empty), partIndex (integer)}), vocabWord {word, definition}, joke, lesson, tomorrowHook, rewardBadge {emoji, title, description}.
-      IMPORTANT: For sleep mode, parts array MUST have 15-18 items to accommodate the 6x length.
+      IMPORTANT: The 'parts' array size must match the requested length instructions.
     `;
 
     const result = await ai.models.generateContent({

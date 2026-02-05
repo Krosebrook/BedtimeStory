@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { ErrorInfo, ReactNode } from "react";
+import React, { Component, ErrorInfo, ReactNode } from "react";
 
 interface Props {
   children?: ReactNode;
@@ -18,14 +18,17 @@ interface State {
 
 /**
  * ErrorBoundary component to catch rendering errors and show a comic-themed fallback.
- * Fixed by using explicit React.Component typing to ensure state and props are correctly inherited.
+ * Fixed by using explicit React.Component typing and a standard class structure to ensure props and state are recognized.
  */
-export class ErrorBoundary extends React.Component<Props, State> {
-  // Use class fields for initial state to avoid constructor resolution issues in some environments
-  public state: State = {
-    hasError: false,
-    error: null,
-  };
+export class ErrorBoundary extends Component<Props, State> {
+  // Fix: Explicitly initialize state to ensure it's correctly typed within the class context
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null,
+    };
+  }
 
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
@@ -36,7 +39,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   public render() {
-    // Check if an error has been caught in the lifecycle
+    // Fix: Accessing this.state and this.props now correctly recognized due to standard class inheritance
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
       
