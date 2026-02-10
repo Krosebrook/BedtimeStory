@@ -17,8 +17,7 @@ export class AIClient {
     
     let lengthInstructions = "";
     if (input.mode === 'sleep') {
-        // Bedtime mode remains long for sleep induction, adjusted slightly by user length choice if relevant
-        const multiplier = input.storyLength === 'short' ? 0.7 : (input.storyLength === 'long' ? 1.5 : 1);
+        const multiplier = input.storyLength === 'short' ? 0.7 : (input.storyLength === 'long' ? 1.5 : (input.storyLength === 'eternal' ? 2 : 1));
         const partsCount = Math.floor(15 * multiplier);
         const wordCountMin = Math.floor(4000 * multiplier);
         const wordCountMax = Math.floor(6000 * multiplier);
@@ -28,34 +27,34 @@ export class AIClient {
         WORD COUNT: Total story word count MUST be between ${wordCountMin} and ${wordCountMax} words.
         STRUCTURE: Divide the story into ${partsCount} distinct, very long parts to ensure a deep, sustained journey to sleep.
         PACING: Hypnotically slow. Use extensive descriptions of environments, sensations, and peaceful transitions. 
-        REPETITION: Use rhythmic, calming repetitions to induce relaxation.
+        VOCABULARY: Rich, evocative, and rhythmic, but avoid harsh sounds.
         `;
     } else {
         switch (input.storyLength) {
             case 'short':
-                lengthInstructions = "LENGTH: approx 400 words. 3-4 parts. Fast-paced, focused narrative.";
+                lengthInstructions = "LENGTH: approx 400 words. 3-4 parts. Fast-paced, simple vocabulary, focused narrative.";
                 break;
             case 'long':
-                lengthInstructions = "LENGTH: approx 2500 words. 8-10 parts. Deep world-building, sub-plots, and detailed descriptions.";
+                lengthInstructions = "LENGTH: approx 2500 words. 8-10 parts. Advanced vocabulary, deep world-building, sub-plots, and rich detailed descriptions.";
                 break;
             case 'eternal':
-                lengthInstructions = "LENGTH: Maximum complexity. approx 4000 words. 12-15 parts. Epic scale, extensive dialogue and atmosphere.";
+                lengthInstructions = "LENGTH: Maximum complexity. approx 4500 words. 15-18 parts. Epic scale, sophisticated vocabulary, extensive dialogue, and atmospheric world-building.";
                 break;
             case 'medium':
             default:
-                lengthInstructions = "LENGTH: approx 1200 words. 5-7 parts. Balanced pacing and detail.";
+                lengthInstructions = "LENGTH: approx 1200 words. 5-7 parts. Balanced pacing, moderate vocabulary complexity.";
                 break;
         }
     }
 
     let prompt = "";
     if (input.mode === 'sleep') {
-        const { subMode, texture, sound, scent, theme } = input.sleepConfig;
+        const { texture, sound, scent, theme } = input.sleepConfig;
         prompt = `
         Create a MASTERPIECE of soothing bedtime storytelling.
         HERO: ${input.heroName}.
-        MODE: ${subMode}. THEME: ${theme}.
-        SENSORY ANCHORS TO WEAVE IN: "${texture}", "${sound}", "${scent}".
+        THEME: ${theme}.
+        SENSORY ANCHORS TO WEAVE IN: "${texture || 'softness'}", "${sound || 'quietness'}", "${scent || 'sweetness'}".
         
         SLEEP HYPNOSIS RULES:
         1. ZERO CONFLICT. The hero is exploring, resting, or observing beautiful, quiet things.
@@ -66,9 +65,9 @@ export class AIClient {
     } else if (input.mode === 'classic') {
       prompt = `
         Epic adventure for ${input.heroName}. Power: ${input.heroPower}. 
-        Setting: ${input.setting}. Sidekick: ${input.sidekick}. Problem: ${input.problem}.
+        Setting: ${input.setting}. Sidekick: ${input.sidekick || 'none'}. Problem: ${input.problem || 'a mystery'}.
         ${lengthInstructions}
-        Provide 3 meaningful choices at the end of each part except the last one.
+        Style: Heroic children's literature. Provide 3 meaningful choices at the end of each part except the last one.
       `;
     } else {
       prompt = `

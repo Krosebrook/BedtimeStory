@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
+import { AmbientTheme } from './types';
+
 class SoundManager {
   private ctx: AudioContext | null = null;
   private muted: boolean = false;
@@ -11,7 +13,9 @@ class SoundManager {
   // Ambient Sound Nodes
   private ambientGain: GainNode | null = null;
   private ambientSource: AudioBufferSourceNode | null = null;
+  private secondarySource: AudioBufferSourceNode | null = null;
   private isAmbientPlaying: boolean = false;
+  private activeLFOs: OscillatorNode[] = [];
 
   private init() {
     if (!this.ctx) {
@@ -24,27 +28,18 @@ class SoundManager {
 
   setMuted(muted: boolean) {
     this.muted = muted;
-    if (this.ambientGain) {
-        // Smoothly fade out or in ambient
-        this.ambientGain.gain.setTargetAtTime(muted ? 0 : 0.05, this.ctx!.currentTime, 0.5);
+    if (this.ambientGain && this.ctx) {
+        this.ambientGain.gain.setTargetAtTime(muted ? 0 : 0.06, this.ctx.currentTime, 0.5);
     }
   }
 
-  // --- Ambient Sound Engine (Procedural) ---
-
-  /**
-   * Generates a noise buffer.
-   * Type: 'white', 'pink', or 'brown'
-   */
   private createNoiseBuffer(type: 'white' | 'pink' | 'brown'): AudioBuffer {
-      const bufferSize = 2 * this.ctx!.sampleRate; // 2 seconds loop
+      const bufferSize = 2 * this.ctx!.sampleRate;
       const buffer = this.ctx!.createBuffer(1, bufferSize, this.ctx!.sampleRate);
       const output = buffer.getChannelData(0);
 
       if (type === 'white') {
-          for (let i = 0; i < bufferSize; i++) {
-              output[i] = Math.random() * 2 - 1;
-          }
+          for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
       } else if (type === 'pink') {
           let b0, b1, b2, b3, b4, b5, b6;
           b0 = b1 = b2 = b3 = b4 = b5 = b6 = 0.0;
@@ -57,7 +52,7 @@ class SoundManager {
               b4 = 0.55000 * b4 + white * 0.5329522;
               b5 = -0.7616 * b5 - white * 0.0168980;
               output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
-              output[i] *= 0.11; // (roughly) compensate for gain
+              output[i] *= 0.11;
               b6 = white * 0.115926;
           }
       } else if (type === 'brown') {
@@ -66,134 +61,274 @@ class SoundManager {
               const white = Math.random() * 2 - 1;
               output[i] = (lastOut + (0.02 * white)) / 1.02;
               lastOut = output[i];
-              output[i] *= 3.5; // (roughly) compensate for gain
+              output[i] *= 3.5;
           }
       }
       return buffer;
   }
 
-  playAmbient(mode: 'space' | 'rain' | 'forest' | 'magic') {
+  playAmbient(mode: AmbientTheme) {
       this.init();
-      if (this.muted) return;
+      if (this.muted || mode === 'auto') {
+          this.stopAmbient();
+          return;
+      }
 
-      // Stop existing if different mode, or if already playing just return
       if (this.isAmbientPlaying) {
           this.stopAmbient();
       }
 
-      let noiseType: 'brown' | 'pink' | 'white' = 'pink';
-      let filterFreq = 1000;
-      let filterType: BiquadFilterType = 'lowpass';
-      let q = 1;
-      let modulationFreq = 0.1;
-      let modulationDepth = 200;
+      this.ambientGain = this.ctx!.createGain();
+      this.ambientGain.gain.value = 0;
+      this.ambientGain.connect(this.ctx!.destination);
 
-      // Configure based on theme
       switch(mode) {
           case 'space': // Cosmic Hum
-              noiseType = 'brown';
-              filterFreq = 150;
-              modulationFreq = 0.05;
-              modulationDepth = 50;
+              this.setupCosmicHum();
               break;
           case 'rain': // Gentle Rain
-              noiseType = 'pink';
-              filterFreq = 1200;
-              filterType = 'bandpass';
-              q = 0.5;
-              modulationFreq = 0.5;
-              modulationDepth = 400;
+              this.setupGentleRain();
               break;
-          case 'forest': // Forest Ambiance (wind + leaves)
-              noiseType = 'pink';
-              filterFreq = 2500;
-              filterType = 'lowpass';
-              modulationFreq = 0.2;
-              modulationDepth = 1000;
+          case 'forest': // Forest Night
+              this.setupForestNight();
               break;
           case 'magic': // Ethereal
-              noiseType = 'white';
-              filterFreq = 1500;
-              filterType = 'bandpass';
-              q = 12; // Resonant
-              modulationFreq = 0.15;
-              modulationDepth = 500;
+              this.setupEthereal();
+              break;
+          case 'ocean': // Midnight Ocean
+              this.setupMidnightOcean();
+              break;
+          case 'crickets': // Summer Night
+              this.setupSummerNight();
               break;
       }
 
-      const buffer = this.createNoiseBuffer(noiseType);
-      
+      this.isAmbientPlaying = true;
+      this.ambientGain.gain.linearRampToValueAtTime(0.06, this.ctx!.currentTime + 4);
+  }
+
+  private setupCosmicHum() {
+      const buffer = this.createNoiseBuffer('brown');
       this.ambientSource = this.ctx!.createBufferSource();
       this.ambientSource.buffer = buffer;
       this.ambientSource.loop = true;
 
-      // Create filter to shape the noise
       const filter = this.ctx!.createBiquadFilter();
-      filter.type = filterType;
-      filter.frequency.value = filterFreq;
-      filter.Q.value = q;
+      filter.type = 'lowpass';
+      filter.frequency.value = 70;
 
-      // LFO for movement (makes it feel organic)
       const lfo = this.ctx!.createOscillator();
-      lfo.type = 'sine';
-      lfo.frequency.value = modulationFreq; 
+      lfo.frequency.value = 0.02;
       const lfoGain = this.ctx!.createGain();
-      lfoGain.gain.value = modulationDepth;
+      lfoGain.gain.value = 40;
       lfo.connect(lfoGain);
       lfoGain.connect(filter.frequency);
       lfo.start();
+      this.activeLFOs.push(lfo);
 
-      this.ambientGain = this.ctx!.createGain();
-      this.ambientGain.gain.value = 0; // Start silent for fade in
-      
       this.ambientSource.connect(filter);
-      filter.connect(this.ambientGain);
-      this.ambientGain.connect(this.ctx!.destination);
-
+      filter.connect(this.ambientGain!);
       this.ambientSource.start();
-      this.isAmbientPlaying = true;
+  }
 
-      // Fade in
-      this.ambientGain.gain.linearRampToValueAtTime(0.04, this.ctx!.currentTime + 3);
+  private setupGentleRain() {
+      const rainBuffer = this.createNoiseBuffer('pink');
+      this.ambientSource = this.ctx!.createBufferSource();
+      this.ambientSource.buffer = rainBuffer;
+      this.ambientSource.loop = true;
+
+      const filter = this.ctx!.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 2000;
+
+      // Patter layer
+      const patterBuffer = this.createNoiseBuffer('white');
+      this.secondarySource = this.ctx!.createBufferSource();
+      this.secondarySource.buffer = patterBuffer;
+      this.secondarySource.loop = true;
+      
+      const patterFilter = this.ctx!.createBiquadFilter();
+      patterFilter.type = 'bandpass';
+      patterFilter.frequency.value = 2500;
+      patterFilter.Q.value = 0.5;
+
+      const patterGain = this.ctx!.createGain();
+      const lfo = this.ctx!.createOscillator();
+      lfo.frequency.value = 0.5;
+      const lfoGain = this.ctx!.createGain();
+      lfoGain.gain.value = 0.02;
+      lfo.connect(lfoGain);
+      lfoGain.connect(patterGain.gain);
+      lfo.start();
+      this.activeLFOs.push(lfo);
+
+      this.ambientSource.connect(filter);
+      filter.connect(this.ambientGain!);
+      this.secondarySource.connect(patterFilter);
+      patterFilter.connect(patterGain);
+      patterGain.connect(this.ambientGain!);
+      
+      this.ambientSource.start();
+      this.secondarySource.start();
+  }
+
+  private setupForestNight() {
+      const windBuffer = this.createNoiseBuffer('pink');
+      this.ambientSource = this.ctx!.createBufferSource();
+      this.ambientSource.buffer = windBuffer;
+      this.ambientSource.loop = true;
+
+      const filter = this.ctx!.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 1500;
+
+      const lfo = this.ctx!.createOscillator();
+      lfo.frequency.value = 0.1;
+      const lfoGain = this.ctx!.createGain();
+      lfoGain.gain.value = 800;
+      lfo.connect(lfoGain);
+      lfoGain.connect(filter.frequency);
+      lfo.start();
+      this.activeLFOs.push(lfo);
+
+      this.ambientSource.connect(filter);
+      filter.connect(this.ambientGain!);
+      this.ambientSource.start();
+  }
+
+  private setupMidnightOcean() {
+      const buffer = this.createNoiseBuffer('brown');
+      this.ambientSource = this.ctx!.createBufferSource();
+      this.ambientSource.buffer = buffer;
+      this.ambientSource.loop = true;
+
+      const filter = this.ctx!.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 400;
+
+      const surgeGain = this.ctx!.createGain();
+      const lfo = this.ctx!.createOscillator();
+      lfo.frequency.value = 0.12; // slow waves
+      const lfoGain = this.ctx!.createGain();
+      lfoGain.gain.value = 0.04;
+      lfo.connect(lfoGain);
+      lfoGain.connect(surgeGain.gain);
+      lfo.start();
+      this.activeLFOs.push(lfo);
+
+      this.ambientSource.connect(filter);
+      filter.connect(surgeGain);
+      surgeGain.connect(this.ambientGain!);
+      this.ambientSource.start();
+  }
+
+  private setupSummerNight() {
+      const buffer = this.createNoiseBuffer('pink');
+      this.ambientSource = this.ctx!.createBufferSource();
+      this.ambientSource.buffer = buffer;
+      this.ambientSource.loop = true;
+
+      const filter = this.ctx!.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 800;
+
+      this.ambientSource.connect(filter);
+      filter.connect(this.ambientGain!);
+      this.ambientSource.start();
+
+      // Procedural Cricket Chirps
+      const chirpOsc = this.ctx!.createOscillator();
+      chirpOsc.type = 'sine';
+      chirpOsc.frequency.value = 4500;
+      
+      const chirpGain = this.ctx!.createGain();
+      chirpGain.gain.value = 0;
+
+      const mod = this.ctx!.createOscillator();
+      mod.type = 'square';
+      mod.frequency.value = 25; // chirp rate
+      const modGain = this.ctx!.createGain();
+      modGain.gain.value = 0.01;
+      mod.connect(modGain);
+      modGain.connect(chirpGain.gain);
+      mod.start();
+      this.activeLFOs.push(mod);
+
+      // Slower rhythm for the chirps
+      const rhythm = this.ctx!.createOscillator();
+      rhythm.type = 'sine';
+      rhythm.frequency.value = 0.4;
+      const rhythmGain = this.ctx!.createGain();
+      rhythmGain.gain.value = 0.01;
+      rhythm.connect(rhythmGain);
+      rhythmGain.connect(chirpGain.gain);
+      rhythm.start();
+      this.activeLFOs.push(rhythm);
+
+      chirpOsc.connect(chirpGain);
+      chirpGain.connect(this.ambientGain!);
+      chirpOsc.start();
+  }
+
+  private setupEthereal() {
+      const buffer = this.createNoiseBuffer('white');
+      this.ambientSource = this.ctx!.createBufferSource();
+      this.ambientSource.buffer = buffer;
+      this.ambientSource.loop = true;
+
+      const filter = this.ctx!.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 2000;
+      filter.Q.value = 20;
+
+      const lfo = this.ctx!.createOscillator();
+      lfo.frequency.value = 0.15;
+      const lfoGain = this.ctx!.createGain();
+      lfoGain.gain.value = 1000;
+      lfo.connect(lfoGain);
+      lfoGain.connect(filter.frequency);
+      lfo.start();
+      this.activeLFOs.push(lfo);
+
+      this.ambientSource.connect(filter);
+      filter.connect(this.ambientGain!);
+      this.ambientSource.start();
   }
 
   stopAmbient() {
-      if (this.ambientSource && this.ambientGain) {
-          // Fade out
-          const now = this.ctx!.currentTime;
+      if (this.ambientSource && this.ambientGain && this.ctx) {
+          const now = this.ctx.currentTime;
           this.ambientGain.gain.setValueAtTime(this.ambientGain.gain.value, now);
-          this.ambientGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.5);
+          this.ambientGain.gain.exponentialRampToValueAtTime(0.0001, now + 2);
           
-          const oldSource = this.ambientSource;
+          const sources = [this.ambientSource, this.secondarySource];
+          const lfos = [...this.activeLFOs];
+          this.activeLFOs = [];
+
           setTimeout(() => {
-              try { oldSource.stop(); } catch(e) {}
-          }, 1600);
+              sources.forEach(s => { if (s) try { s.stop(); } catch(e) {} });
+              lfos.forEach(l => { if (l) try { l.stop(); } catch(e) {} });
+          }, 2100);
           
           this.ambientSource = null;
+          this.secondarySource = null;
           this.ambientGain = null;
           this.isAmbientPlaying = false;
       }
   }
-
-
-  // --- SFX ---
 
   playChoice() {
     if (this.muted) return;
     this.init();
     const osc = this.ctx!.createOscillator();
     const gain = this.ctx!.createGain();
-    
     osc.type = 'sine';
     osc.frequency.setValueAtTime(440, this.ctx!.currentTime);
     osc.frequency.exponentialRampToValueAtTime(880, this.ctx!.currentTime + 0.1);
-    
     gain.gain.setValueAtTime(0.3, this.ctx!.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, this.ctx!.currentTime + 0.1);
-    
     osc.connect(gain);
     gain.connect(this.ctx!.destination);
-    
     osc.start();
     osc.stop(this.ctx!.currentTime + 0.1);
   }
@@ -203,17 +338,13 @@ class SoundManager {
     this.init();
     const osc = this.ctx!.createOscillator();
     const gain = this.ctx!.createGain();
-    
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(150, this.ctx!.currentTime);
     osc.frequency.exponentialRampToValueAtTime(300, this.ctx!.currentTime + 0.3);
-    
     gain.gain.setValueAtTime(0.1, this.ctx!.currentTime);
     gain.gain.linearRampToValueAtTime(0, this.ctx!.currentTime + 0.3);
-    
     osc.connect(gain);
     gain.connect(this.ctx!.destination);
-    
     osc.start();
     osc.stop(this.ctx!.currentTime + 0.3);
   }
@@ -222,22 +353,17 @@ class SoundManager {
     if (this.muted) return;
     this.init();
     const now = this.ctx!.currentTime;
-    const freqs = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
-    
+    const freqs = [523.25, 659.25, 783.99, 1046.50];
     freqs.forEach((f, i) => {
       const osc = this.ctx!.createOscillator();
       const gain = this.ctx!.createGain();
-      
       osc.type = 'sine';
       osc.frequency.setValueAtTime(f, now + i * 0.1);
-      
       gain.gain.setValueAtTime(0, now + i * 0.1);
       gain.gain.linearRampToValueAtTime(0.1, now + i * 0.1 + 0.05);
       gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.1 + 0.4);
-      
       osc.connect(gain);
       gain.connect(this.ctx!.destination);
-      
       osc.start(now + i * 0.1);
       osc.stop(now + i * 0.1 + 0.4);
     });
@@ -248,17 +374,13 @@ class SoundManager {
     this.init();
     const osc = this.ctx!.createOscillator();
     const gain = this.ctx!.createGain();
-    
     osc.type = 'sawtooth';
     osc.frequency.setValueAtTime(150, this.ctx!.currentTime);
     osc.frequency.linearRampToValueAtTime(50, this.ctx!.currentTime + 0.2);
-    
     gain.gain.setValueAtTime(0.2, this.ctx!.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, this.ctx!.currentTime + 0.2);
-    
     osc.connect(gain);
     gain.connect(this.ctx!.destination);
-    
     osc.start();
     osc.stop(this.ctx!.currentTime + 0.2);
   }

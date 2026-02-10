@@ -7,7 +7,7 @@
 export type AppMode = 'classic' | 'madlibs' | 'sleep';
 export type SleepSubMode = 'automatic' | 'parent-madlib' | 'child-friendly';
 export type StoryLength = 'short' | 'medium' | 'long' | 'eternal';
-export type AmbientTheme = 'space' | 'rain' | 'forest' | 'magic' | 'auto';
+export type AmbientTheme = 'space' | 'rain' | 'forest' | 'magic' | 'ocean' | 'crickets' | 'auto';
 
 export interface SleepConfig {
     subMode: SleepSubMode;
