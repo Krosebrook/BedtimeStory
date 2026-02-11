@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React from "react";
+import React, { Component, ReactNode, ErrorInfo } from "react";
 
 interface Props {
-  children?: React.ReactNode;
-  fallback?: React.ReactNode;
+  children?: ReactNode;
+  fallback?: ReactNode;
 }
 
 interface State {
@@ -20,6 +20,7 @@ interface State {
  * ErrorBoundary component to catch rendering errors and show a comic-themed fallback.
  * Explicitly extending React.Component to ensure props and setState are correctly inherited.
  */
+// Fix: Explicitly using React.Component ensures the type system correctly identifies the inherited props and setState methods.
 export class ErrorBoundary extends React.Component<Props, State> {
   // Initialize state
   public state: State = {
@@ -31,14 +32,15 @@ export class ErrorBoundary extends React.Component<Props, State> {
     return { hasError: true, error };
   }
 
-  public componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  // Fix: Use ErrorInfo from the React import
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
   }
 
   public render() {
-    // Accessing state and props from the Component base class
+    // Fix: Access inherited state and props from the React.Component base class explicitly.
+    // Using 'this.state' and 'this.props' from a class that correctly extends React.Component.
     const { hasError, error } = this.state;
-    // Fix: Accessing props correctly from the React.Component base class
     const { children, fallback } = this.props;
 
     if (hasError) {
@@ -51,7 +53,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
           <div className="font-mono text-sm opacity-70 bg-black/50 p-4 rounded mb-6 text-left w-full max-w-md overflow-auto">
             {error?.message}
           </div>
-          {/* Fix: setState is a method inherited from the React.Component base class */}
+          {/* Fix: setState is a method inherited from the React.Component base class. */}
           <button 
             onClick={() => this.setState({ hasError: false, error: null })}
             className="comic-btn bg-blue-500 text-white px-6 py-2 hover:bg-blue-400"
