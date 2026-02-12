@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { Component, ErrorInfo, ReactNode } from "react";
+import React, { ErrorInfo, ReactNode } from "react";
 
 interface Props {
   children?: ReactNode;
@@ -19,7 +19,7 @@ interface State {
  * ErrorBoundary component to catch rendering errors and show a comic-themed fallback.
  * Inheriting from React.Component ensures props and setState are correctly recognized by TypeScript.
  */
-export class ErrorBoundary extends Component<Props, State> {
+export class ErrorBoundary extends React.Component<Props, State> {
   
   constructor(props: Props) {
     super(props);

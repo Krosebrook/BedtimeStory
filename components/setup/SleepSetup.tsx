@@ -52,6 +52,8 @@ export const SleepSetup: React.FC<SleepSetupProps> = ({ input, onChange, handleS
         return () => soundManager.stopAmbient();
     }, [input.sleepConfig.ambientTheme, input.mode]);
 
+    const activeTheme = sleepThemes.find(t => t.id === input.sleepConfig.theme);
+
     return (
         <div className="space-y-6 md:space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="text-center relative">
@@ -85,7 +87,7 @@ export const SleepSetup: React.FC<SleepSetupProps> = ({ input, onChange, handleS
                 </div>
             </div>
 
-            {/* Sub-mode Toggle: More kinetic feedback */}
+            {/* Sub-mode Toggle */}
             <div className="flex justify-center">
                 <div className="bg-indigo-950/80 p-1.5 rounded-full border border-indigo-400/20 flex gap-1 shadow-inner relative overflow-hidden group">
                     <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -110,7 +112,7 @@ export const SleepSetup: React.FC<SleepSetupProps> = ({ input, onChange, handleS
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 items-stretch">
                 <div className="flex flex-col gap-6">
                     {input.sleepConfig.subMode === 'parent-madlib' ? (
-                        <div className="space-y-6 flex flex-col h-full">
+                        <div className="space-y-6 flex flex-col h-full animate-in fade-in slide-in-from-left-4 duration-500">
                             <h4 className="font-comic text-[10px] md:text-xs uppercase text-indigo-400 tracking-[0.3em] border-l-4 border-indigo-600 pl-3 mb-2">Sensory Weaving</h4>
                             <SensoryInputCard 
                                 icon="☁️" 
@@ -141,11 +143,12 @@ export const SleepSetup: React.FC<SleepSetupProps> = ({ input, onChange, handleS
                             />
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center justify-center p-10 bg-indigo-900/30 rounded-[4rem] border-2 border-indigo-400/20 h-full relative overflow-hidden group shadow-inner">
+                        <div className="flex flex-col items-center justify-center p-10 bg-indigo-900/30 rounded-[4rem] border-2 border-indigo-400/20 h-full relative overflow-hidden group shadow-inner animate-in fade-in slide-in-from-left-4 duration-500">
                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.15)_0%,transparent_70%)] group-hover:scale-150 transition-transform duration-2000"></div>
                             <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
                             
                             <motion.div 
+                                key={activeTheme?.id || 'default'}
                                 animate={{ 
                                     rotate: [0, 5, -5, 0], 
                                     scale: [1, 1.05, 1],
@@ -154,11 +157,13 @@ export const SleepSetup: React.FC<SleepSetupProps> = ({ input, onChange, handleS
                                 transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
                                 className="text-8xl md:text-9xl mb-8 relative z-10 drop-shadow-[0_0_40px_rgba(255,255,255,0.2)]"
                             >
-                                🧸
+                                {activeTheme ? activeTheme.icon : '🧸'}
                             </motion.div>
-                            <h4 className="font-comic text-2xl md:text-3xl text-white mb-3 relative z-10 uppercase tracking-widest">Adventure Pick</h4>
+                            <h4 className="font-comic text-2xl md:text-3xl text-white mb-3 relative z-10 uppercase tracking-widest">
+                                {activeTheme ? activeTheme.label : 'Adventure Pick'}
+                            </h4>
                             <p className="text-center text-sm md:text-base text-indigo-200/50 leading-relaxed italic px-8 relative z-10 font-serif">
-                                Simply choose a magical theme on the right to start your journey.
+                                {activeTheme ? activeTheme.desc : 'Simply choose a magical theme on the right to start your journey.'}
                             </p>
                             
                             {/* Visual connector for larger screens */}
@@ -167,7 +172,7 @@ export const SleepSetup: React.FC<SleepSetupProps> = ({ input, onChange, handleS
                     )}
                 </div>
 
-                <div className="space-y-6 flex flex-col h-full">
+                <div className="space-y-6 flex flex-col h-full animate-in fade-in slide-in-from-right-4 duration-500">
                     <h4 className="font-comic text-[10px] md:text-xs uppercase text-indigo-400 tracking-[0.3em] border-l-4 border-indigo-600 pl-3 mb-2">Dreamscape Selection</h4>
                     <div className="grid grid-cols-2 gap-4">
                         {sleepThemes.map(t => {
@@ -175,13 +180,13 @@ export const SleepSetup: React.FC<SleepSetupProps> = ({ input, onChange, handleS
                             return (
                                 <motion.button 
                                     key={t.id} 
-                                    whileHover={{ scale: 1.04, y: -4 }}
+                                    whileHover={{ scale: 1.04, y: -4, borderColor: 'rgba(165, 180, 252, 0.4)' }}
                                     whileTap={{ scale: 0.96 }}
                                     onClick={() => { handleSleepConfigChange('theme', t.id); soundManager.playChoice(); }}
                                     className={`group relative flex flex-col items-center justify-center p-5 rounded-[2.5rem] border-2 transition-all duration-500 aspect-square overflow-hidden
                                         ${isSelected 
                                             ? `border-indigo-100 bg-gradient-to-br ${t.color} shadow-[0_20px_60px_-15px_rgba(99,102,241,0.5)]` 
-                                            : 'bg-indigo-950/40 border-indigo-400/10 text-white/30 hover:border-indigo-400/30 hover:bg-indigo-900/40'
+                                            : 'bg-indigo-950/40 border-indigo-400/10 text-white/30'
                                         }
                                     `}
                                 >
@@ -231,20 +236,19 @@ export const SleepSetup: React.FC<SleepSetupProps> = ({ input, onChange, handleS
                     <div className="min-h-[4rem] bg-indigo-950/80 rounded-[2rem] p-5 border border-indigo-400/20 flex items-center justify-center text-center shadow-inner relative overflow-hidden group">
                         <div className="absolute top-0 left-0 w-2 h-full bg-indigo-500/20 group-hover:w-full transition-all duration-1000"></div>
                         <AnimatePresence mode="wait">
-                            {(() => {
-                                const activeTheme = sleepThemes.find(t => t.id === input.sleepConfig.theme);
-                                return activeTheme ? (
-                                    <motion.p 
-                                        key={activeTheme.id}
-                                        initial={{ opacity: 0, y: 10, filter: 'blur(5px)' }}
-                                        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                                        exit={{ opacity: 0, y: -10, filter: 'blur(5px)' }}
-                                        className="text-xs md:text-sm text-indigo-100/80 italic leading-relaxed font-serif relative z-10 px-4"
-                                    >
-                                        "{activeTheme.desc}"
-                                    </motion.p>
-                                ) : <span className="text-[10px] text-indigo-500/40 tracking-[0.3em] uppercase relative z-10">Select Your World</span>;
-                            })()}
+                            {activeTheme ? (
+                                <motion.p 
+                                    key={activeTheme.id}
+                                    initial={{ opacity: 0, y: 10, filter: 'blur(5px)' }}
+                                    animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                                    exit={{ opacity: 0, y: -10, filter: 'blur(5px)' }}
+                                    className="text-xs md:text-sm text-indigo-100/80 italic leading-relaxed font-serif relative z-10 px-4"
+                                >
+                                    "{activeTheme.desc}"
+                                </motion.p>
+                            ) : (
+                                <span className="text-[10px] text-indigo-500/40 tracking-[0.3em] uppercase relative z-10">Select Your World</span>
+                            )}
                         </AnimatePresence>
                     </div>
                 </div>
