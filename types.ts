@@ -24,7 +24,6 @@ export interface MadLibState {
     food: string;
     sillyWord: string;
     animal: string;
-    feeling: string;
 }
 
 export interface StoryState {
@@ -69,6 +68,24 @@ export interface ComicFace {
     choices: string[];
     resolvedChoice?: string;
 }
+
+export interface UserPreferences {
+    narratorVoice: StoryState['narratorVoice'];
+    storyLength: StoryLength;
+    sleepTheme: string;
+    fontSize: 'normal' | 'large';
+    isMuted: boolean;
+    reducedMotion: boolean;
+}
+
+export const DEFAULT_PREFERENCES: UserPreferences = {
+    narratorVoice: 'Kore',
+    storyLength: 'medium',
+    sleepTheme: 'Cloud Kingdom',
+    fontSize: 'normal',
+    isMuted: false,
+    reducedMotion: false
+};
 
 export const TOTAL_PAGES = 18;
 export const INITIAL_PAGES = 6;

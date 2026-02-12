@@ -4,11 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
+import React, { useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { StoryFull, StoryState } from '../types';
 import { SyncedText } from './SyncedText';
-import { narrationManager } from '../NarrationManager';
 import { soundManager } from '../SoundManager';
 
 interface ReadingViewProps {
@@ -32,14 +31,15 @@ interface ReadingViewProps {
     playbackRate: number;
     setPlaybackRate: (rate: number) => void;
     onSubmitFeedback?: (rating: number, text: string) => void;
+    fontSize: 'normal' | 'large';
+    onChangeFontSize: (size: 'normal' | 'large') => void;
 }
 
 export const ReadingView: React.FC<ReadingViewProps> = ({
     story, input, currentPartIndex, narrationTime, narrationDuration, isNarrating, isNarrationLoading,
-    scenes = {}, isSceneLoading = false, onGenerateScene, onGenerateSceneIndex, onTogglePlayback, 
-    onStopNarration, onChoice, onReset, toggleMute, isMuted, playbackRate, setPlaybackRate, onSubmitFeedback
+    scenes = {}, onTogglePlayback, onStopNarration, onChoice, onReset, toggleMute, isMuted, playbackRate, setPlaybackRate, 
+    fontSize, onChangeFontSize
 }) => {
-    const [fontSize, setFontSize] = useState<'normal' | 'large'>('normal');
     const scrollRef = useRef<HTMLDivElement>(null);
     const isSleepMode = input.mode === 'sleep';
 
@@ -80,7 +80,7 @@ export const ReadingView: React.FC<ReadingViewProps> = ({
                 </div>
                 <div className="pointer-events-auto flex gap-2 md:gap-3">
                     <button 
-                        onClick={() => { setFontSize(f => f === 'normal' ? 'large' : 'normal'); soundManager.playChoice(); }} 
+                        onClick={() => { onChangeFontSize(fontSize === 'normal' ? 'large' : 'normal'); soundManager.playChoice(); }} 
                         className="bg-black/40 hover:bg-black/60 w-10 h-10 md:w-12 md:h-12 rounded-full border border-white/20 backdrop-blur-lg text-white font-bold flex items-center justify-center outline-none ring-blue-500 focus:ring-2" 
                         aria-label="Adjust font size"
                         title="Text Size"

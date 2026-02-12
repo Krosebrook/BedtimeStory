@@ -104,10 +104,11 @@ class SoundManager {
       }
 
       this.isAmbientPlaying = true;
-      this.ambientGain.gain.linearRampToValueAtTime(0.06, this.ctx!.currentTime + 4);
+      this.ambientGain.gain.linearRampToValueAtTime(0.08, this.ctx!.currentTime + 4);
   }
 
   private setupCosmicHum() {
+      // Deep Rumble
       const buffer = this.createNoiseBuffer('brown');
       this.ambientSource = this.ctx!.createBufferSource();
       this.ambientSource.buffer = buffer;
@@ -115,12 +116,26 @@ class SoundManager {
 
       const filter = this.ctx!.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = 70;
+      filter.frequency.value = 80;
 
+      // Drone Layers (Detuned Sines for 'beating' effect)
+      const drone1 = this.ctx!.createOscillator();
+      drone1.type = 'sine';
+      drone1.frequency.value = 55; // A1
+      const droneGain1 = this.ctx!.createGain();
+      droneGain1.gain.value = 0.03;
+
+      const drone2 = this.ctx!.createOscillator();
+      drone2.type = 'sine';
+      drone2.frequency.value = 55.5; // Slightly detuned
+      const droneGain2 = this.ctx!.createGain();
+      droneGain2.gain.value = 0.03;
+
+      // Filter modulation LFO
       const lfo = this.ctx!.createOscillator();
-      lfo.frequency.value = 0.02;
+      lfo.frequency.value = 0.05;
       const lfoGain = this.ctx!.createGain();
-      lfoGain.gain.value = 40;
+      lfoGain.gain.value = 20;
       lfo.connect(lfoGain);
       lfoGain.connect(filter.frequency);
       lfo.start();
@@ -128,6 +143,17 @@ class SoundManager {
 
       this.ambientSource.connect(filter);
       filter.connect(this.ambientGain!);
+
+      drone1.connect(droneGain1);
+      droneGain1.connect(this.ambientGain!);
+      drone1.start();
+      this.activeLFOs.push(drone1);
+
+      drone2.connect(droneGain2);
+      droneGain2.connect(this.ambientGain!);
+      drone2.start();
+      this.activeLFOs.push(drone2);
+      
       this.ambientSource.start();
   }
 
@@ -139,7 +165,7 @@ class SoundManager {
 
       const filter = this.ctx!.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = 2000;
+      filter.frequency.value = 1200;
 
       // Patter layer
       const patterBuffer = this.createNoiseBuffer('white');
@@ -154,7 +180,7 @@ class SoundManager {
 
       const patterGain = this.ctx!.createGain();
       const lfo = this.ctx!.createOscillator();
-      lfo.frequency.value = 0.5;
+      lfo.frequency.value = 0.3; // Slower modulation
       const lfoGain = this.ctx!.createGain();
       lfoGain.gain.value = 0.02;
       lfo.connect(lfoGain);
@@ -173,53 +199,116 @@ class SoundManager {
   }
 
   private setupForestNight() {
+      // Wind base (Pink Noise)
       const windBuffer = this.createNoiseBuffer('pink');
       this.ambientSource = this.ctx!.createBufferSource();
       this.ambientSource.buffer = windBuffer;
       this.ambientSource.loop = true;
 
-      const filter = this.ctx!.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.value = 1500;
+      const windFilter = this.ctx!.createBiquadFilter();
+      windFilter.type = 'lowpass';
+      windFilter.frequency.value = 400;
 
+      // Rustling Leaves (Pink Noise, High-passed)
+      const leafBuffer = this.createNoiseBuffer('pink');
+      this.secondarySource = this.ctx!.createBufferSource();
+      this.secondarySource.buffer = leafBuffer;
+      this.secondarySource.loop = true;
+
+      const leafFilter = this.ctx!.createBiquadFilter();
+      leafFilter.type = 'highpass';
+      leafFilter.frequency.value = 2500;
+      
+      const leafGain = this.ctx!.createGain();
+      leafGain.gain.value = 0.04;
+
+      // LFO for wind swelling
       const lfo = this.ctx!.createOscillator();
-      lfo.frequency.value = 0.1;
+      lfo.frequency.value = 0.15; // Slightly faster wind
       const lfoGain = this.ctx!.createGain();
-      lfoGain.gain.value = 800;
+      lfoGain.gain.value = 200;
       lfo.connect(lfoGain);
-      lfoGain.connect(filter.frequency);
+      lfoGain.connect(windFilter.frequency);
       lfo.start();
       this.activeLFOs.push(lfo);
 
-      this.ambientSource.connect(filter);
-      filter.connect(this.ambientGain!);
+      // Modulation for leaves
+      const leafLfo = this.ctx!.createOscillator();
+      leafLfo.frequency.value = 0.08;
+      const leafLfoGain = this.ctx!.createGain();
+      leafLfoGain.gain.value = 0.01;
+      leafLfo.connect(leafLfoGain);
+      leafLfoGain.connect(leafGain.gain);
+      leafLfo.start();
+      this.activeLFOs.push(leafLfo);
+
+      this.ambientSource.connect(windFilter);
+      windFilter.connect(this.ambientGain!);
+
+      this.secondarySource.connect(leafFilter);
+      leafFilter.connect(leafGain);
+      leafGain.connect(this.ambientGain!);
+
       this.ambientSource.start();
+      this.secondarySource.start();
   }
 
   private setupMidnightOcean() {
-      const buffer = this.createNoiseBuffer('brown');
+     // Deep Waves (Brown Noise)
+      const waveBuffer = this.createNoiseBuffer('brown');
       this.ambientSource = this.ctx!.createBufferSource();
-      this.ambientSource.buffer = buffer;
+      this.ambientSource.buffer = waveBuffer;
       this.ambientSource.loop = true;
 
-      const filter = this.ctx!.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.value = 400;
+      const waveFilter = this.ctx!.createBiquadFilter();
+      waveFilter.type = 'lowpass';
+      waveFilter.frequency.value = 350;
 
-      const surgeGain = this.ctx!.createGain();
-      const lfo = this.ctx!.createOscillator();
-      lfo.frequency.value = 0.12; // slow waves
-      const lfoGain = this.ctx!.createGain();
-      lfoGain.gain.value = 0.04;
-      lfo.connect(lfoGain);
-      lfoGain.connect(surgeGain.gain);
-      lfo.start();
-      this.activeLFOs.push(lfo);
+      const waveGain = this.ctx!.createGain();
+      waveGain.gain.value = 1;
 
-      this.ambientSource.connect(filter);
-      filter.connect(surgeGain);
-      surgeGain.connect(this.ambientGain!);
+      // Spray/Foam (Pink Noise)
+      const sprayBuffer = this.createNoiseBuffer('pink');
+      this.secondarySource = this.ctx!.createBufferSource();
+      this.secondarySource.buffer = sprayBuffer;
+      this.secondarySource.loop = true;
+
+      const sprayFilter = this.ctx!.createBiquadFilter();
+      sprayFilter.type = 'highpass';
+      sprayFilter.frequency.value = 2000;
+      
+      const sprayGain = this.ctx!.createGain();
+      sprayGain.gain.value = 0; // Starts silent, modulated by wave
+
+      // Master LFO for the wave cycle (approx 10 seconds)
+      const waveLfo = this.ctx!.createOscillator();
+      waveLfo.frequency.value = 0.1; 
+      
+      // Modulate Wave Volume
+      const waveLfoGain = this.ctx!.createGain();
+      waveLfoGain.gain.value = 0.3; // +/- 0.3 gain
+      waveLfo.connect(waveLfoGain);
+      waveLfoGain.connect(waveGain.gain);
+
+      // Modulate Spray Volume (sync'd)
+      const sprayLfoGain = this.ctx!.createGain();
+      sprayLfoGain.gain.value = 0.03;
+      waveLfo.connect(sprayLfoGain);
+      sprayLfoGain.connect(sprayGain.gain);
+
+      waveLfo.start();
+      this.activeLFOs.push(waveLfo);
+
+      this.ambientSource.connect(waveFilter);
+      waveFilter.connect(waveGain);
+      waveGain.connect(this.ambientGain!);
+
+      this.secondarySource.connect(sprayFilter);
+      sprayFilter.connect(sprayGain);
+      sprayGain.connect(this.ambientGain!);
+
       this.ambientSource.start();
+      this.secondarySource.start();
   }
 
   private setupSummerNight() {
@@ -230,7 +319,7 @@ class SoundManager {
 
       const filter = this.ctx!.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = 800;
+      filter.frequency.value = 600;
 
       this.ambientSource.connect(filter);
       filter.connect(this.ambientGain!);
@@ -248,7 +337,7 @@ class SoundManager {
       mod.type = 'square';
       mod.frequency.value = 25; // chirp rate
       const modGain = this.ctx!.createGain();
-      modGain.gain.value = 0.01;
+      modGain.gain.value = 0.02;
       mod.connect(modGain);
       modGain.connect(chirpGain.gain);
       mod.start();
@@ -259,7 +348,7 @@ class SoundManager {
       rhythm.type = 'sine';
       rhythm.frequency.value = 0.4;
       const rhythmGain = this.ctx!.createGain();
-      rhythmGain.gain.value = 0.01;
+      rhythmGain.gain.value = 0.02;
       rhythm.connect(rhythmGain);
       rhythmGain.connect(chirpGain.gain);
       rhythm.start();
@@ -268,6 +357,7 @@ class SoundManager {
       chirpOsc.connect(chirpGain);
       chirpGain.connect(this.ambientGain!);
       chirpOsc.start();
+      this.activeLFOs.push(chirpOsc);
   }
 
   private setupEthereal() {
@@ -298,6 +388,7 @@ class SoundManager {
   stopAmbient() {
       if (this.ambientSource && this.ambientGain && this.ctx) {
           const now = this.ctx.currentTime;
+          this.ambientGain.gain.cancelScheduledValues(now);
           this.ambientGain.gain.setValueAtTime(this.ambientGain.gain.value, now);
           this.ambientGain.gain.exponentialRampToValueAtTime(0.0001, now + 2);
           

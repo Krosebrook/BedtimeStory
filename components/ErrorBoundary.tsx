@@ -1,10 +1,9 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { Component, ReactNode, ErrorInfo } from "react";
+import React, { Component, ErrorInfo, ReactNode } from "react";
 
 interface Props {
   children?: ReactNode;
@@ -18,28 +17,27 @@ interface State {
 
 /**
  * ErrorBoundary component to catch rendering errors and show a comic-themed fallback.
- * Explicitly extending React.Component to ensure props and setState are correctly inherited.
+ * Inheriting from React.Component ensures props and setState are correctly recognized by TypeScript.
  */
-// Fix: Explicitly using React.Component ensures the type system correctly identifies the inherited props and setState methods.
-export class ErrorBoundary extends React.Component<Props, State> {
-  // Initialize state
-  public state: State = {
-    hasError: false,
-    error: null,
-  };
+export class ErrorBoundary extends Component<Props, State> {
+  
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null,
+    };
+  }
 
-  public static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  // Fix: Use ErrorInfo from the React import
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
   }
 
-  public render() {
-    // Fix: Access inherited state and props from the React.Component base class explicitly.
-    // Using 'this.state' and 'this.props' from a class that correctly extends React.Component.
+  render() {
     const { hasError, error } = this.state;
     const { children, fallback } = this.props;
 
@@ -51,9 +49,8 @@ export class ErrorBoundary extends React.Component<Props, State> {
           <h2 className="text-4xl font-comic text-red-500 mb-4 animate-bounce">💥 POW! SPLAT!</h2>
           <p className="text-xl font-serif mb-4">Something went wrong in the multiverse.</p>
           <div className="font-mono text-sm opacity-70 bg-black/50 p-4 rounded mb-6 text-left w-full max-w-md overflow-auto">
-            {error?.message}
+            {error instanceof Error ? error.message : "Unknown error"}
           </div>
-          {/* Fix: setState is a method inherited from the React.Component base class. */}
           <button 
             onClick={() => this.setState({ hasError: false, error: null })}
             className="comic-btn bg-blue-500 text-white px-6 py-2 hover:bg-blue-400"

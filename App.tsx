@@ -13,6 +13,7 @@ import { useApiKey } from './useApiKey';
 import { useStoryEngine } from './hooks/useStoryEngine';
 import { useNarrationSync } from './hooks/useNarrationSync';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { SettingsModal } from './components/SettingsModal';
 
 // Lazy load main views for better initial chunking
 const Setup = lazy(() => import('./Setup').then(m => ({ default: m.Setup })));
@@ -26,7 +27,7 @@ const App: React.FC = () => {
         handleApiKeyDialogContinue 
     } = useApiKey();
 
-    const [isMuted, setIsMuted] = useState(false);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     const {
         phase,
@@ -41,6 +42,8 @@ const App: React.FC = () => {
         isNarrationLoading,
         isOnline,
         history,
+        error,
+        userPreferences,
         handleInputChange,
         handleMadLibChange,
         handleSleepConfigChange,
@@ -55,16 +58,19 @@ const App: React.FC = () => {
         stopNarration,
         loadStoryFromHistory,
         deleteStory,
-        submitFeedback
+        submitFeedback,
+        saveUserPreferences,
+        clearError
     } = useStoryEngine(validateApiKey, setShowApiKeyDialog);
 
     const { narrationTime, narrationDuration, playbackRate, setPlaybackRate } = useNarrationSync(isNarrating);
 
-    const toggleMute = () => {
-        const nextMute = !isMuted;
-        setIsMuted(nextMute);
-        soundManager.setMuted(nextMute);
-    };
+    // Apply reduced motion globally if preferred
+    if (userPreferences.reducedMotion) {
+        document.documentElement.style.scrollBehavior = 'auto';
+    } else {
+        document.documentElement.style.scrollBehavior = 'smooth';
+    }
 
     return (
         <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center font-comic selection:bg-yellow-200 overflow-hidden">
@@ -81,6 +87,15 @@ const App: React.FC = () => {
 
             <AnimatePresence>
                 {showApiKeyDialog && <ApiKeyDialog onContinue={handleApiKeyDialogContinue} />}
+                {isSettingsOpen && (
+                    <SettingsModal 
+                        isOpen={isSettingsOpen}
+                        onClose={() => setIsSettingsOpen(false)}
+                        currentPrefs={userPreferences}
+                        onSave={saveUserPreferences}
+                        onReset={() => saveUserPreferences({...userPreferences, ...{narratorVoice:'Kore', storyLength:'medium', fontSize:'normal', isMuted:false, reducedMotion:false}})} // Basic reset for now
+                    />
+                )}
             </AnimatePresence>
             
             <Suspense fallback={<LoadingFX />}>
@@ -89,7 +104,6 @@ const App: React.FC = () => {
                         <Setup 
                             input={input} 
                             onChange={handleInputChange} 
-                            // Fix: Added handleMadLibChange to Setup props
                             handleMadLibChange={handleMadLibChange}
                             onLaunch={generateStory} 
                             onGenerateAvatar={generateAvatar}
@@ -101,6 +115,9 @@ const App: React.FC = () => {
                             handleSleepConfigChange={handleSleepConfigChange}
                             onDeleteHistory={deleteStory}
                             onPrepareSequel={prepareSequel}
+                            error={error}
+                            onClearError={clearError}
+                            onOpenSettings={() => setIsSettingsOpen(true)}
                         />
                     </ErrorBoundary>
                 )}
@@ -123,11 +140,13 @@ const App: React.FC = () => {
                             onStopNarration={stopNarration}
                             onChoice={handleChoice}
                             onReset={reset}
-                            toggleMute={toggleMute}
-                            isMuted={isMuted}
+                            toggleMute={() => saveUserPreferences({...userPreferences, isMuted: !userPreferences.isMuted})}
+                            isMuted={userPreferences.isMuted}
                             playbackRate={playbackRate}
                             setPlaybackRate={setPlaybackRate}
                             onSubmitFeedback={submitFeedback}
+                            fontSize={userPreferences.fontSize}
+                            onChangeFontSize={(size) => saveUserPreferences({...userPreferences, fontSize: size})}
                         />
                     </ErrorBoundary>
                 )}

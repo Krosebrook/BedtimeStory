@@ -4,12 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import { StoryFull } from '../types';
+import { StoryFull, UserPreferences, DEFAULT_PREFERENCES } from '../types';
 
 const DB_NAME = 'BedtimeChroniclesDB';
 const STORE_NAME_STORIES = 'stories';
 const STORE_NAME_AUDIO = 'audio';
-const DB_VERSION = 3; // Incremented for new audio store
+const STORE_NAME_PREFS = 'preferences';
+const DB_VERSION = 4; // Bumped for preferences store
 
 export interface CachedStory {
   id: string;
@@ -56,8 +57,38 @@ class StorageManager {
             // Simple key-value store for audio buffers (key: text_hash+voice, value: ArrayBuffer)
             db.createObjectStore(STORE_NAME_AUDIO);
         }
+
+        if (!db.objectStoreNames.contains(STORE_NAME_PREFS)) {
+            db.createObjectStore(STORE_NAME_PREFS);
+        }
       };
     });
+  }
+
+  // --- Preferences ---
+
+  async savePreferences(prefs: UserPreferences): Promise<void> {
+      await this.init();
+      return new Promise((resolve, reject) => {
+          const transaction = this.db!.transaction([STORE_NAME_PREFS], 'readwrite');
+          const store = transaction.objectStore(STORE_NAME_PREFS);
+          const request = store.put(prefs, 'user_settings');
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+      });
+  }
+
+  async getPreferences(): Promise<UserPreferences> {
+      await this.init();
+      return new Promise((resolve, reject) => {
+          const transaction = this.db!.transaction([STORE_NAME_PREFS], 'readonly');
+          const store = transaction.objectStore(STORE_NAME_PREFS);
+          const request = store.get('user_settings');
+          request.onsuccess = () => {
+              resolve(request.result || DEFAULT_PREFERENCES);
+          };
+          request.onerror = () => reject(request.error);
+      });
   }
 
   // --- Stories ---
