@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -18,7 +17,7 @@ export const VOICES: { id: StoryState['narratorVoice'], icon: string, label: str
     { id: 'Kore', icon: '🌸', label: 'Soothing' },
     { id: 'Aoede', icon: '🐦', label: 'Melodic' },
     { id: 'Zephyr', icon: '🍃', label: 'Gentle (Soft)' },
-    { id: 'Lira', icon: '✨', label: 'Ethereal (Soft)' },
+    { id: 'Leda', icon: '✨', label: 'Ethereal (Soft)' },
     { id: 'Puck', icon: '🦊', label: 'Playful' },
     { id: 'Charon', icon: '🐻', label: 'Deep' },
     { id: 'Fenrir', icon: '🐺', label: 'Bold' }

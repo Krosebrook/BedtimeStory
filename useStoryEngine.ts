@@ -26,14 +26,17 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
         problem: '',
         heroAvatarUrl: '',
         mode: 'classic',
-        madlibs: { adjective: '', place: '', food: '', sillyWord: '', animal: '', feeling: '' },
+        madlibs: { adjective: '', place: '', food: '', sillyWord: '', animal: '' },
         sleepConfig: { 
             subMode: 'automatic', 
             texture: '', 
             sound: '', 
             scent: '', 
-            theme: 'Cloud Kingdom' 
-        }
+            theme: 'Cloud Kingdom',
+            ambientTheme: 'auto'
+        },
+        narratorVoice: 'Kore',
+        storyLength: 'medium'
     });
 
     const [story, setStory] = useState<StoryFull | null>(null);
@@ -86,11 +89,11 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
             const textToRead = isLastPart 
                 ? `${currentPart.text}. Today's lesson is: ${story.lesson}. Here is a joke: ${story.joke}. ${story.tomorrowHook}` 
                 : currentPart.text;
-            await narrationManager.fetchNarration(textToRead);
+            await narrationManager.fetchNarration(textToRead, input.narratorVoice);
         } finally {
             setIsNarrationLoading(false);
         }
-    }, [story, currentPartIndex]);
+    }, [story, currentPartIndex, input.narratorVoice]);
 
     // Handle auto-advance for sleep mode
     useEffect(() => {

@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -105,9 +104,11 @@ export class NarrationManager {
 
   /**
    * Fetches TTS audio from Gemini API or retrieves from persistent cache.
-   * Automatically starts playback upon success.
+   * @param text The text to read.
+   * @param voiceName The voice profile to use.
+   * @param autoPlay If true, starts playback immediately after loading. If false, just caches.
    */
-  async fetchNarration(text: string, voiceName: string = 'Kore'): Promise<void> {
+  async fetchNarration(text: string, voiceName: string = 'Kore', autoPlay: boolean = true): Promise<void> {
     this.init();
     
     // Create a cache key that includes the voice and text snippet
@@ -116,7 +117,7 @@ export class NarrationManager {
     // 1. Check in-memory cache
     if (this.memoryCache.has(cacheKey)) {
       this.currentBuffer = this.memoryCache.get(cacheKey)!;
-      this.play();
+      if (autoPlay) this.play();
       return;
     }
 
@@ -128,7 +129,7 @@ export class NarrationManager {
             const buffer = await this.decodeAudioData(bytes, this.audioCtx!);
             this.memoryCache.set(cacheKey, buffer);
             this.currentBuffer = buffer;
-            this.play();
+            if (autoPlay) this.play();
             return;
         }
     } catch (e) {
@@ -161,7 +162,7 @@ export class NarrationManager {
         const buffer = await this.decodeAudioData(bytes, this.audioCtx!);
         this.memoryCache.set(cacheKey, buffer);
         this.currentBuffer = buffer;
-        this.play();
+        if (autoPlay) this.play();
       }
     } catch (error) {
       console.error("TTS synthesis failed", error);

@@ -17,13 +17,16 @@ interface State {
 
 /**
  * ErrorBoundary component to catch rendering errors and show a comic-themed fallback.
- * Inheriting from React.Component ensures props and setState are correctly recognized by TypeScript.
+ * Inheriting from Component ensures props and setState are correctly recognized by TypeScript.
  */
 export class ErrorBoundary extends React.Component<Props, State> {
-  public state: State = {
-    hasError: false,
-    error: null,
-  };
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null,
+    };
+  }
 
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };

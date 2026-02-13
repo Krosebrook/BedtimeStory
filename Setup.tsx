@@ -1,10 +1,9 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StoryState, MadLibState, SleepConfig, AppMode } from './types';
 import { HeroHeader } from './HeroHeader';
@@ -77,23 +76,21 @@ export const Setup: React.FC<SetupProps> = ({
 }) => {
     const isReady = useMemo(() => checkIsReady(input), [input]);
     const launchButtonText = useMemo(() => getLaunchButtonText(input.mode, isLoading), [input.mode, isLoading]);
+    const [isMemoryJarOpen, setIsMemoryJarOpen] = useState(false);
 
     return (
         <main className="min-h-screen w-full bg-slate-950 flex flex-col items-center py-6 md:py-10 px-4 md:px-8 overflow-y-auto" role="main">
             
-            {/* Full Screen Loading Overlay with Dynamic Context */}
-            <AnimatePresence>
-                {isLoading && (
-                    <LoadingFX 
-                        embedded={false} 
-                        mode={input.mode} 
-                        heroName={input.mode === 'madlibs' ? input.madlibs.animal : input.heroName} 
-                    />
-                )}
-            </AnimatePresence>
-
             {/* Utility Bar */}
-            <div className="absolute top-4 right-4 z-50">
+            <div className="absolute top-4 right-4 z-50 flex gap-4">
+                <button 
+                    onClick={() => { setIsMemoryJarOpen(true); soundManager.playChoice(); }}
+                    className="w-12 h-12 bg-white rounded-full border-4 border-black flex items-center justify-center text-2xl shadow-[4px_4px_0px_black] hover:scale-110 transition-transform active:scale-95"
+                    aria-label="Open Memory Jar"
+                    title="Saved Stories"
+                >
+                    🏺
+                </button>
                 <button 
                     onClick={() => { onOpenSettings(); soundManager.playChoice(); }}
                     className="w-12 h-12 bg-white rounded-full border-4 border-black flex items-center justify-center text-2xl shadow-[4px_4px_0px_black] hover:scale-110 transition-transform hover:rotate-90 active:scale-95"
@@ -103,13 +100,31 @@ export const Setup: React.FC<SetupProps> = ({
                 </button>
             </div>
 
-            <HeroHeader activeMode={input.mode} onModeChange={(mode) => onChange('mode', mode)} />
+            <HeroHeader 
+                activeMode={input.mode} 
+                onModeChange={(mode) => onChange('mode', mode)} 
+                onImageUpload={(url) => {
+                    onChange('heroAvatarUrl', url);
+                    soundManager.playSparkle();
+                }}
+            />
 
-            <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+            <div className="max-w-4xl w-full">
                 <motion.section 
                     layout 
-                    className={`lg:col-span-2 border-[6px] border-black shadow-[12px_12px_0px_rgba(30,58,138,0.3)] p-4 md:p-10 relative z-20 rounded-sm flex flex-col min-h-[450px] md:min-h-[500px] overflow-hidden transition-colors duration-1000 ${input.mode === 'sleep' ? 'bg-indigo-950 text-indigo-50' : 'bg-white text-black'}`}
+                    className={`border-[6px] border-black shadow-[12px_12px_0px_rgba(30,58,138,0.3)] p-4 md:p-10 relative z-20 rounded-sm flex flex-col min-h-[450px] md:min-h-[500px] overflow-hidden transition-colors duration-1000 ${input.mode === 'sleep' ? 'bg-indigo-950 text-indigo-50' : 'bg-white text-black'}`}
                 >
+                    {/* Embedded Loading State: Takes over the card content */}
+                    <AnimatePresence>
+                        {isLoading && (
+                            <LoadingFX 
+                                embedded={true} 
+                                mode={input.mode} 
+                                heroName={input.mode === 'madlibs' ? input.madlibs.animal : input.heroName} 
+                            />
+                        )}
+                    </AnimatePresence>
+
                     <AnimatePresence>
                         {error && (
                             <motion.div 
@@ -162,15 +177,15 @@ export const Setup: React.FC<SetupProps> = ({
                         {launchButtonText}
                     </button>
                 </motion.section>
-
-                <aside className="lg:col-span-1 space-y-4 md:space-y-6">
-                    <MemoryJar 
-                        history={history}
-                        onLoadHistory={onLoadHistory}
-                        onDeleteHistory={onDeleteHistory}
-                    />
-                </aside>
             </div>
+
+            <MemoryJar 
+                isOpen={isMemoryJarOpen}
+                onClose={() => setIsMemoryJarOpen(false)}
+                history={history}
+                onLoadHistory={onLoadHistory}
+                onDeleteHistory={onDeleteHistory}
+            />
         </main>
     );
 };

@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -36,7 +35,7 @@ export interface StoryState {
     mode: AppMode;
     madlibs: MadLibState;
     sleepConfig: SleepConfig;
-    narratorVoice: 'Puck' | 'Charon' | 'Kore' | 'Fenrir' | 'Aoede' | 'Zephyr' | 'Lira';
+    narratorVoice: 'Puck' | 'Charon' | 'Kore' | 'Fenrir' | 'Aoede' | 'Zephyr' | 'Leda';
     storyLength: StoryLength;
 }
 

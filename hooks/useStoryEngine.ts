@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -133,13 +132,29 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
         setIsNarrating(true);
         setIsNarrationLoading(true);
         try {
+            // 1. Play Current
             const currentPart = story.parts[currentPartIndex];
             const isLastPart = currentPartIndex === story.parts.length - 1;
             const textToRead = isLastPart 
                 ? `${currentPart.text}. Today's lesson is: ${story.lesson}. Here is a joke: ${story.joke}. ${story.tomorrowHook}` 
                 : currentPart.text;
             
-            await narrationManager.fetchNarration(textToRead, input.narratorVoice);
+            // Wait for current to load and play
+            await narrationManager.fetchNarration(textToRead, input.narratorVoice, true);
+
+            // 2. Preload Next (Fire and Forget)
+            if (!isLastPart) {
+                const nextPart = story.parts[currentPartIndex + 1];
+                const nextIsLast = currentPartIndex + 1 === story.parts.length - 1;
+                const nextText = nextIsLast
+                    ? `${nextPart.text}. Today's lesson is: ${story.lesson}. Here is a joke: ${story.joke}. ${story.tomorrowHook}`
+                    : nextPart.text;
+                
+                // Preload with autoPlay = false
+                narrationManager.fetchNarration(nextText, input.narratorVoice, false)
+                    .catch(err => console.warn("Preload failed", err));
+            }
+
         } catch (e) {
             console.error(e);
         } finally {
@@ -153,9 +168,10 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
             setIsNarrating(false);
             if (input.mode === 'sleep' && story) {
                 if (currentPartIndex < story.parts.length - 1) {
+                    // Reduced delay for continuous feel, relying on preloaded audio
                     setTimeout(() => {
                         setCurrentPartIndex(prev => prev + 1);
-                    }, 1500);
+                    }, 500); 
                 }
             }
         };
@@ -168,7 +184,7 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
                  if (!narrationManager.state.isPlaying) {
                      playNarration();
                  }
-            }, 1000);
+            }, 100); // Fast auto-play trigger
             return () => clearTimeout(timer);
         }
     }, [currentPartIndex, input.mode, phase, story, playNarration]);

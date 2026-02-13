@@ -1,10 +1,9 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppMode } from './types';
 
@@ -48,8 +47,24 @@ export const LoadingFX: React.FC<LoadingFXProps> = ({ embedded = false, mode = '
     const [stepIndex, setStepIndex] = useState(0);
     const [progress, setProgress] = useState(0);
     
+    // Generate background stars/dust based on mode
+    const backgroundParticles = useMemo(() => {
+        const count = mode === 'sleep' ? 100 : (mode === 'madlibs' ? 50 : 60);
+        return Array.from({ length: count }).map((_, i) => ({
+            id: i,
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+            size: mode === 'sleep' ? Math.random() * 2 + 0.5 : Math.random() * 4 + 1,
+            color: mode === 'madlibs' 
+                ? ['#FCD34D', '#EF4444', '#60A5FA', '#A78BFA', '#34D399'][Math.floor(Math.random() * 5)] 
+                : '#FFFFFF',
+            delay: Math.random() * 5,
+            duration: mode === 'sleep' ? Math.random() * 3 + 3 : Math.random() * 1.5 + 0.5
+        }));
+    }, [mode]);
+
     useEffect(() => {
-        // Dynamic Particle System
+        // Dynamic Word Particles (Foreground)
         const particleInterval = setInterval(() => {
             const id = Date.now();
             const text = PARTICLES_WORDS[Math.floor(Math.random() * PARTICLES_WORDS.length)];
@@ -58,7 +73,11 @@ export const LoadingFX: React.FC<LoadingFXProps> = ({ embedded = false, mode = '
             const rot = Math.random() * 60 - 30;
             const colors = ['text-yellow-400', 'text-red-500', 'text-blue-400', 'text-purple-400', 'text-white', 'text-pink-500'];
             const color = colors[Math.floor(Math.random() * colors.length)];
-            setParticles(prev => [...prev, { id, text, x, y, rot, color }].slice(-8));
+            
+            // Only add word particles in non-sleep modes to keep sleep mode calm
+            if (mode !== 'sleep') {
+                setParticles(prev => [...prev, { id, text, x, y, rot, color }].slice(-8));
+            }
         }, 300);
 
         const steps = mode === 'sleep' ? LOADING_STEPS_SLEEP : (mode === 'madlibs' ? LOADING_STEPS_MADLIBS : LOADING_STEPS_CLASSIC);
@@ -90,7 +109,7 @@ export const LoadingFX: React.FC<LoadingFXProps> = ({ embedded = false, mode = '
     if (mode === 'sleep') {
         title = heroName ? `DREAMING WITH ${heroName.toUpperCase()}...` : "WEAVING DREAMS...";
         icon = "🌙";
-        bgClass = "bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900 via-slate-950 to-black";
+        bgClass = "bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-950 via-[#020617] to-black";
         barColor = "from-indigo-600 via-purple-400 to-indigo-200";
     } else if (mode === 'madlibs') {
         title = "GENERATING CHAOS...";
@@ -116,49 +135,79 @@ export const LoadingFX: React.FC<LoadingFXProps> = ({ embedded = false, mode = '
             className={`${embedded ? 'absolute' : 'fixed'} inset-0 z-[1000] flex flex-col items-center justify-center overflow-hidden origin-top ${bgClass}`}
         >
             {/* Cinematic Overlay Texture */}
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 animate-pulse pointer-events-none"></div>
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 animate-pulse pointer-events-none z-10 mix-blend-overlay"></div>
 
-            {/* Twinkling Background */}
-            <div className="absolute inset-0 pointer-events-none opacity-50">
-                {Array.from({ length: 40 }).map((_, i) => (
-                    <motion.div 
-                        key={i} 
-                        initial={{ opacity: 0.1 }}
-                        animate={{ opacity: [0.1, 1, 0.1], scale: [1, 1.5, 1] }}
-                        transition={{ duration: 1.5 + Math.random() * 3, repeat: Infinity, delay: Math.random() * 2 }}
-                        className="absolute bg-white rounded-full blur-[1px]" 
-                        style={{ 
-                            left: `${Math.random() * 100}%`, 
-                            top: `${Math.random() * 100}%`, 
-                            width: `${Math.random() * 4 + 1}px`, 
-                            height: `${Math.random() * 4 + 1}px`,
-                        }} 
-                    />
-                ))}
-            </div>
+            {/* Dynamic Cosmic Background */}
+            <div className="absolute inset-0 pointer-events-none z-0">
+                {backgroundParticles.map((p) => {
+                    // Animation logic based on mode
+                    const variants = {
+                        sleep: {
+                            opacity: [0, 0.7, 0],
+                            scale: [1, 1.2, 1],
+                            y: [0, -20, 0], // Gentle drift
+                        },
+                        classic: {
+                            opacity: [0, 1, 0],
+                            scale: [0, 1, 0],
+                            y: [100, -100], // Upward motion (warp speed effect)
+                        },
+                        madlibs: {
+                            opacity: [0, 1, 0],
+                            scale: [0, 1.5, 0],
+                            x: [0, Math.random() * 100 - 50], // Chaotic jitter
+                            y: [0, Math.random() * 100 - 50],
+                            rotate: [0, 360]
+                        }
+                    };
 
-            {/* Floating Particles (Only in active modes) */}
-            {mode !== 'sleep' && (
-                <AnimatePresence>
-                    {particles.map(p => (
+                    const activeVariant = mode === 'sleep' ? variants.sleep : (mode === 'madlibs' ? variants.madlibs : variants.classic);
+
+                    return (
                         <motion.div 
                             key={p.id} 
-                            initial={{ scale: 0, opacity: 0, rotate: p.rot, y: 0 }}
-                            animate={{ scale: [0, 1.5, 1], opacity: [0, 1, 0], y: -100 }}
-                            exit={{ scale: 0, opacity: 0 }}
-                            transition={{ duration: 1.5 }}
-                            className={`absolute font-comic text-4xl md:text-6xl font-black ${p.color} select-none whitespace-nowrap z-20 pointer-events-none drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]`}
-                            style={{ 
-                                left: p.x, 
-                                top: p.y,
-                                textShadow: '3px 3px 0 #000'
+                            initial={{ opacity: 0, scale: 0 }}
+                            animate={activeVariant}
+                            transition={{ 
+                                duration: p.duration, 
+                                repeat: Infinity, 
+                                delay: p.delay,
+                                ease: mode === 'sleep' ? "easeInOut" : "linear" 
                             }}
-                        >
-                            {p.text}
-                        </motion.div>
-                    ))}
-                </AnimatePresence>
-            )}
+                            className={`absolute rounded-full ${mode === 'sleep' ? 'blur-[0.5px]' : ''}`}
+                            style={{ 
+                                left: p.left, 
+                                top: p.top, 
+                                width: `${p.size}px`, 
+                                height: `${p.size}px`,
+                                backgroundColor: p.color,
+                                boxShadow: mode === 'sleep' ? `0 0 ${p.size * 2}px ${p.color}` : 'none'
+                            }} 
+                        />
+                    );
+                })}
+            </div>
+
+            {/* Floating Words (Only in active modes, logic moved to useEffect but rendered here) */}
+            <AnimatePresence>
+                {particles.map(p => (
+                    <motion.div 
+                        key={p.id} 
+                        initial={{ scale: 0, opacity: 0, rotate: p.rot, y: 0 }}
+                        animate={{ scale: [0, 1.5, 1], opacity: [0, 1, 0], y: -100 }}
+                        exit={{ scale: 0, opacity: 0 }}
+                        transition={{ duration: 1.5 }}
+                        className={`absolute font-comic text-4xl md:text-6xl font-black ${p.color} select-none whitespace-nowrap z-20 pointer-events-none drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]`}
+                        style={{ 
+                            left: p.x, 
+                            top: p.y,
+                            textShadow: '3px 3px 0 #000'
+                        }}
+                    >
+                        {p.text}
+                    </motion.div>
+                ))}
+            </AnimatePresence>
 
             {/* Central Focal Point */}
             <div className="relative z-30 text-center flex flex-col items-center p-6 w-full max-w-2xl">
