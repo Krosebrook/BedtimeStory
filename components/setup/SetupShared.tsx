@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -169,6 +168,7 @@ export const GeminiWizardStep: React.FC<{ prompt: string; children: React.ReactN
 export const LengthSlider = ({ value, onChange, mode }: { value: StoryLength, onChange: (val: StoryLength) => void, mode: AppMode }) => {
     const steps: StoryLength[] = ['short', 'medium', 'long', 'eternal'];
     
+    // Explicit icons for distinct duration
     const config = {
         short: { icon: '⚡', label: 'Short', color: 'bg-yellow-400', border: 'border-yellow-600', text: 'text-yellow-600', desc: '~3 mins' },
         medium: { icon: '📖', label: 'Medium', color: 'bg-blue-400', border: 'border-blue-600', text: 'text-blue-600', desc: '~8 mins' },

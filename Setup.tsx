@@ -40,12 +40,13 @@ interface SetupProps {
 const checkIsReady = (input: StoryState): boolean => {
     switch (input.mode) {
         case 'sleep':
-            return !!input.heroName;
+            return !!input.heroName && input.heroName.trim().length > 0;
         case 'madlibs':
-            return Object.values(input.madlibs).every(v => (v as string).length > 0);
+            return Object.values(input.madlibs).every(v => (v as string).trim().length > 0);
         case 'classic':
         default:
-            return !!input.heroName && !!input.setting;
+            return !!input.heroName && input.heroName.trim().length > 0 && 
+                   !!input.setting && input.setting.trim().length > 0;
     }
 };
 
@@ -60,7 +61,7 @@ const getLaunchButtonText = (mode: AppMode, isLoading: boolean): string => {
 export const Setup: React.FC<SetupProps> = ({ 
     input, 
     onChange, 
-    handleMadLibChange, 
+    handleMadLibChange,
     onLaunch, 
     onGenerateAvatar, 
     isLoading, 
@@ -81,11 +82,22 @@ export const Setup: React.FC<SetupProps> = ({
     return (
         <main className="min-h-screen w-full bg-slate-950 flex flex-col items-center py-6 md:py-10 px-4 md:px-8 overflow-y-auto" role="main">
             
+            {/* Full Screen Loading Overlay with Dynamic Context */}
+            <AnimatePresence>
+                {isLoading && (
+                    <LoadingFX 
+                        embedded={false} 
+                        mode={input.mode} 
+                        heroName={input.mode === 'madlibs' ? input.madlibs.animal : input.heroName} 
+                    />
+                )}
+            </AnimatePresence>
+
             {/* Utility Bar */}
             <div className="absolute top-4 right-4 z-50 flex gap-4">
                 <button 
                     onClick={() => { setIsMemoryJarOpen(true); soundManager.playChoice(); }}
-                    className="w-12 h-12 bg-white rounded-full border-4 border-black flex items-center justify-center text-2xl shadow-[4px_4px_0px_black] hover:scale-110 transition-transform active:scale-95"
+                    className="w-12 h-12 bg-indigo-900 rounded-full border-4 border-black flex items-center justify-center text-2xl shadow-[4px_4px_0px_black] hover:scale-110 transition-transform active:scale-95"
                     aria-label="Open Memory Jar"
                     title="Saved Stories"
                 >
@@ -95,36 +107,22 @@ export const Setup: React.FC<SetupProps> = ({
                     onClick={() => { onOpenSettings(); soundManager.playChoice(); }}
                     className="w-12 h-12 bg-white rounded-full border-4 border-black flex items-center justify-center text-2xl shadow-[4px_4px_0px_black] hover:scale-110 transition-transform hover:rotate-90 active:scale-95"
                     aria-label="Settings"
+                    title="Settings"
                 >
                     ⚙️
                 </button>
             </div>
 
-            <HeroHeader 
-                activeMode={input.mode} 
-                onModeChange={(mode) => onChange('mode', mode)} 
-                onImageUpload={(url) => {
+            <HeroHeader activeMode={input.mode} onModeChange={(mode) => onChange('mode', mode)} onImageUpload={(url) => {
                     onChange('heroAvatarUrl', url);
                     soundManager.playSparkle();
-                }}
-            />
+                }} />
 
             <div className="max-w-4xl w-full">
                 <motion.section 
                     layout 
                     className={`border-[6px] border-black shadow-[12px_12px_0px_rgba(30,58,138,0.3)] p-4 md:p-10 relative z-20 rounded-sm flex flex-col min-h-[450px] md:min-h-[500px] overflow-hidden transition-colors duration-1000 ${input.mode === 'sleep' ? 'bg-indigo-950 text-indigo-50' : 'bg-white text-black'}`}
                 >
-                    {/* Embedded Loading State: Takes over the card content */}
-                    <AnimatePresence>
-                        {isLoading && (
-                            <LoadingFX 
-                                embedded={true} 
-                                mode={input.mode} 
-                                heroName={input.mode === 'madlibs' ? input.madlibs.animal : input.heroName} 
-                            />
-                        )}
-                    </AnimatePresence>
-
                     <AnimatePresence>
                         {error && (
                             <motion.div 
@@ -179,6 +177,7 @@ export const Setup: React.FC<SetupProps> = ({
                 </motion.section>
             </div>
 
+            {/* Collapsible Memory Jar Drawer */}
             <MemoryJar 
                 isOpen={isMemoryJarOpen}
                 onClose={() => setIsMemoryJarOpen(false)}
