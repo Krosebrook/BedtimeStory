@@ -190,10 +190,18 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
     }, [currentPartIndex, input.mode, phase, story, playNarration]);
 
     const generateAvatar = useCallback(async () => {
-        if (!isOnline) return;
+        if (!isOnline) {
+             setError("You are offline. Connect to internet to generate avatar.");
+             return;
+        }
         const name = input.mode === 'classic' ? input.heroName : (input.mode === 'sleep' ? input.heroName : input.madlibs.animal);
         const power = input.mode === 'classic' ? input.heroPower : (input.mode === 'sleep' ? 'Sleeping' : input.madlibs.adjective);
-        if (!name) return;
+        
+        if (!name || name.trim().length === 0) {
+            setError("Please name your hero first!");
+            return;
+        }
+
         if (!(await validateApiKey())) return;
 
         setIsAvatarLoading(true);

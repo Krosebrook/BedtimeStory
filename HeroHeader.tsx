@@ -162,8 +162,8 @@ export const HeroHeader: React.FC<HeroHeaderProps> = ({ activeMode, onModeChange
                     className={`text-center space-y-2 group ${onImageUpload ? 'cursor-pointer hover:scale-105 transition-transform' : 'cursor-default'}`}
                     title={onImageUpload ? "Click to upload your own hero image" : ""}
                 >
-                    {/* Added padding (py-4 px-8) to prevent bg-clip-text from clipping the ascenders/descenders like 'Y' */}
-                    <h1 className="font-comic text-6xl md:text-8xl lg:text-9xl leading-[0.8] tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/80 drop-shadow-[0_4px_0_rgba(0,0,0,0.4)] filter py-4 px-8">
+                    {/* Fixed visual glitch by removing bg-clip-text which sometimes renders as a white box on white backgrounds */}
+                    <h1 className="font-comic text-6xl md:text-8xl lg:text-9xl leading-[0.8] tracking-tighter text-white drop-shadow-[0_4px_0_rgba(0,0,0,0.4)] py-4 px-8">
                         INFINITY
                     </h1>
                     <h1 className={`font-comic text-6xl md:text-8xl lg:text-9xl leading-[0.8] tracking-tighter transition-colors duration-500 drop-shadow-[0_4px_0_rgba(0,0,0,0.4)]
