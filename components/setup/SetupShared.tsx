@@ -166,28 +166,33 @@ export const GeminiWizardStep: React.FC<{ prompt: string; children: React.ReactN
     </motion.div>
 );
 
-export const LengthSlider = ({ value, onChange }: { value: StoryLength, onChange: (val: StoryLength) => void }) => {
+export const LengthSlider = ({ value, onChange, mode }: { value: StoryLength, onChange: (val: StoryLength) => void, mode: AppMode }) => {
     const steps: StoryLength[] = ['short', 'medium', 'long', 'eternal'];
     
     const config = {
-        short: { icon: '⚡', label: 'Quick', color: 'bg-yellow-400', border: 'border-yellow-600', text: 'text-yellow-600', desc: '~3 min sprint' },
-        medium: { icon: '📖', label: 'Story', color: 'bg-blue-400', border: 'border-blue-600', text: 'text-blue-600', desc: '~8 min read' },
-        long: { icon: '📜', label: 'Saga', color: 'bg-purple-400', border: 'border-purple-600', text: 'text-purple-600', desc: '~15 min epic' },
-        eternal: { icon: '♾️', label: 'Eternal', color: 'bg-red-500', border: 'border-red-700', text: 'text-red-600', desc: '~25 min journey' }
+        short: { icon: '⚡', label: 'Short', color: 'bg-yellow-400', border: 'border-yellow-600', text: 'text-yellow-600', desc: '~3 mins' },
+        medium: { icon: '📖', label: 'Medium', color: 'bg-blue-400', border: 'border-blue-600', text: 'text-blue-600', desc: '~8 mins' },
+        long: { icon: '📜', label: 'Long', color: 'bg-purple-400', border: 'border-purple-600', text: 'text-purple-600', desc: '~15 mins' },
+        eternal: { icon: '♾️', label: 'Eternal', color: 'bg-red-500', border: 'border-red-700', text: 'text-red-600', desc: '~25 mins' }
     };
 
     const currentIndex = steps.indexOf(value);
     const activeConfig = config[value];
+    const isSleep = mode === 'sleep';
 
     return (
-        <div className="w-full max-w-xl mx-auto py-8 px-4" role="group" aria-label="Select Story Length">
-            <div className="relative mb-8">
+        <div className={`w-full max-w-xl mx-auto py-6 px-4 border-t ${isSleep ? 'border-white/10' : 'border-slate-100'}`} role="group" aria-label="Select Story Length">
+             <label className={`font-comic text-[10px] md:text-xs uppercase block mb-6 text-center tracking-widest ${isSleep ? 'text-indigo-400' : 'text-slate-400'}`}>
+                Story Duration
+            </label>
+
+            <div className="relative mb-6">
                 {/* Background Track */}
-                <div className="absolute top-1/2 left-0 right-0 h-4 bg-slate-200 rounded-full -translate-y-1/2 border-2 border-slate-300 shadow-inner z-0"></div>
+                <div className="absolute top-1/2 left-0 right-0 h-3 md:h-4 bg-slate-200/50 rounded-full -translate-y-1/2 border-2 border-slate-300/50 z-0"></div>
                 
                 {/* Active Progress Track */}
                 <div 
-                    className={`absolute top-1/2 left-0 h-4 rounded-full -translate-y-1/2 border-2 border-transparent opacity-80 transition-all duration-500 ease-out z-0 ${activeConfig.color}`}
+                    className={`absolute top-1/2 left-0 h-3 md:h-4 rounded-full -translate-y-1/2 border-2 border-transparent opacity-80 transition-all duration-500 ease-out z-0 ${activeConfig.color}`}
                     style={{ width: `${(currentIndex / (steps.length - 1)) * 100}%` }}
                 ></div>
 
@@ -202,32 +207,36 @@ export const LengthSlider = ({ value, onChange }: { value: StoryLength, onChange
                             <button 
                                 key={s}
                                 onClick={() => { onChange(s); soundManager.playChoice(); }}
-                                className={`relative group outline-none transition-all duration-300 focus:scale-110 ${isSelected ? 'scale-125' : 'scale-100 hover:scale-110'}`}
+                                className={`relative group outline-none transition-all duration-300 focus:scale-110 ${isSelected ? 'scale-110' : 'scale-100 hover:scale-105'}`}
                                 aria-pressed={isSelected}
                                 aria-label={`${c.label} length (${c.desc})`}
                             >
-                                <div className={`w-14 h-14 md:w-16 md:h-16 rounded-full border-4 flex items-center justify-center text-3xl md:text-4xl shadow-[4px_4px_0px_rgba(0,0,0,0.2)] transition-all duration-300 
-                                    ${isActive ? `${c.color} ${c.border} text-white` : 'bg-white border-slate-300 text-slate-300 grayscale'}`}>
+                                <div className={`w-12 h-12 md:w-16 md:h-16 rounded-full border-4 flex items-center justify-center text-2xl md:text-4xl shadow-[2px_2px_0px_rgba(0,0,0,0.2)] transition-all duration-300 
+                                    ${isActive 
+                                        ? `${c.color} ${c.border} text-white shadow-md transform -translate-y-1` 
+                                        : 'bg-white border-slate-300 text-slate-300 grayscale'
+                                    }
+                                    ${isSleep && !isActive ? '!bg-indigo-950 !border-indigo-800 !text-indigo-800' : ''}
+                                    `}
+                                >
                                     {c.icon}
                                 </div>
                                 
                                 {isSelected && (
                                     <motion.div 
-                                        initial={{ opacity: 0, y: 10 }}
+                                        initial={{ opacity: 0, y: 5 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        className="absolute -bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap flex flex-col items-center"
+                                        className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap flex flex-col items-center"
                                     >
-                                        <span className={`font-comic font-bold text-lg uppercase ${c.text} drop-shadow-sm`}>{c.label}</span>
+                                        <span className={`font-comic font-bold text-xs md:text-sm uppercase ${isSleep ? 'text-indigo-200' : c.text} drop-shadow-sm`}>
+                                            {c.desc}
+                                        </span>
                                     </motion.div>
                                 )}
                             </button>
                         )
                     })}
                 </div>
-            </div>
-
-            <div className={`text-center mt-6 transition-all duration-300 transform ${activeConfig.text}`}>
-                <p className="font-comic text-xl uppercase tracking-widest animate-pulse">{activeConfig.desc}</p>
             </div>
         </div>
     );

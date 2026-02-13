@@ -13,6 +13,7 @@ import { LoadingFX } from './LoadingFX';
 import { ModeSetup } from './components/setup/ModeSetup';
 import { VoiceSelector } from './components/setup/VoiceSelector';
 import { MemoryJar } from './components/setup/MemoryJar';
+import { LengthSlider } from './components/setup/SetupShared';
 import { soundManager } from './SoundManager';
 
 interface SetupProps {
@@ -60,7 +61,7 @@ const getLaunchButtonText = (mode: AppMode, isLoading: boolean): string => {
 export const Setup: React.FC<SetupProps> = ({ 
     input, 
     onChange, 
-    handleMadLibChange,
+    handleMadLibChange, 
     onLaunch, 
     onGenerateAvatar, 
     isLoading, 
@@ -80,7 +81,7 @@ export const Setup: React.FC<SetupProps> = ({
     return (
         <main className="min-h-screen w-full bg-slate-950 flex flex-col items-center py-6 md:py-10 px-4 md:px-8 overflow-y-auto" role="main">
             
-            {/* Full Screen Loading Overlay */}
+            {/* Full Screen Loading Overlay with Dynamic Context */}
             <AnimatePresence>
                 {isLoading && (
                     <LoadingFX 
@@ -139,6 +140,12 @@ export const Setup: React.FC<SetupProps> = ({
                             onGenerateAvatar={onGenerateAvatar}
                         />
                     </div>
+
+                    <LengthSlider 
+                        value={input.storyLength}
+                        onChange={(v) => onChange('storyLength', v)}
+                        mode={input.mode}
+                    />
 
                     <VoiceSelector 
                         selectedVoice={input.narratorVoice}

@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { StoryState, MadLibState } from '../../types';
-import { HeroAvatarDisplay, MadLibField, LengthSlider } from './SetupShared';
+import { HeroAvatarDisplay, MadLibField } from './SetupShared';
 
 interface MadlibsSetupProps {
     input: StoryState;
@@ -33,10 +33,6 @@ export const MadlibsSetup: React.FC<MadlibsSetupProps> = ({ input, handleMadLibC
             <MadLibField label="Animal" value={input.madlibs.animal} onChange={v => handleMadLibChange('animal', v)} suggestions={["Hamster", "Dragon", "Penguin"]} /> yelled 
             <MadLibField label="Silly Word" value={input.madlibs.sillyWord} onChange={v => handleMadLibChange('sillyWord', v)} suggestions={["Bazinga!", "Sploot!", "Zoinks!"]} />!</p>
             
-            <div className="mt-12 text-black">
-                <label className="font-comic text-xs uppercase text-slate-400 block mb-6 tracking-widest">Chaos Magnitude</label>
-                <LengthSlider value={input.storyLength} onChange={(v) => onChange('storyLength', v)} />
-            </div>
         </div>
     );
 };

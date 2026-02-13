@@ -6,7 +6,7 @@
 
 import React, { useState } from 'react';
 import { StoryState } from '../../types';
-import { GeminiWizardStep, HeroAvatarDisplay, LengthSlider } from './SetupShared';
+import { GeminiWizardStep, HeroAvatarDisplay } from './SetupShared';
 import { soundManager } from '../../SoundManager';
 
 interface ClassicSetupProps {
@@ -63,11 +63,6 @@ export const ClassicSetup: React.FC<ClassicSetupProps> = ({ input, onChange, isA
                         <p className="font-comic text-xl md:text-2xl">The World: <span className="text-purple-600 underline decoration-purple-200">{input.setting}</span></p>
                     </div>
                     
-                    <div className="mt-8">
-                        <label className="font-comic text-xs uppercase text-slate-400 block mb-4 tracking-widest">Adventure Depth</label>
-                        <LengthSlider value={input.storyLength} onChange={(v) => onChange('storyLength', v)} />
-                    </div>
-
                     <button 
                         onClick={() => { setWizardStep(0); soundManager.playChoice(); }} 
                         className="mt-6 text-sm md:text-base text-slate-400 hover:text-blue-500 underline decoration-dotted transition-colors"

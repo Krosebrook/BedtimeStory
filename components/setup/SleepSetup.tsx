@@ -174,65 +174,68 @@ export const SleepSetup: React.FC<SleepSetupProps> = ({ input, onChange, handleS
 
                 <div className="space-y-6 flex flex-col h-full animate-in fade-in slide-in-from-right-4 duration-500">
                     <h4 className="font-comic text-[10px] md:text-xs uppercase text-indigo-400 tracking-[0.3em] border-l-4 border-indigo-600 pl-3 mb-2">Dreamscape Selection</h4>
-                    <div className="grid grid-cols-2 gap-4">
+                    
+                    {/* ENHANCED THEME GRID */}
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
                         {sleepThemes.map(t => {
                             const isSelected = input.sleepConfig.theme === t.id;
                             return (
                                 <motion.button 
                                     key={t.id} 
-                                    whileHover={{ scale: 1.04, y: -4, borderColor: 'rgba(165, 180, 252, 0.4)' }}
-                                    whileTap={{ scale: 0.96 }}
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
                                     onClick={() => { handleSleepConfigChange('theme', t.id); soundManager.playChoice(); }}
-                                    className={`group relative flex flex-col items-center justify-center p-5 rounded-[2.5rem] border-2 transition-all duration-500 aspect-square overflow-hidden
+                                    className={`relative group flex flex-col items-center justify-center p-4 h-32 md:h-40 rounded-3xl border-[3px] transition-all duration-300 overflow-hidden outline-none focus:ring-4 focus:ring-indigo-500/50
                                         ${isSelected 
-                                            ? `border-indigo-100 bg-gradient-to-br ${t.color} shadow-[0_20px_60px_-15px_rgba(99,102,241,0.5)]` 
-                                            : 'bg-indigo-950/40 border-indigo-400/10 text-white/30'
+                                            ? 'border-indigo-300 bg-indigo-900/50 shadow-[0_0_25px_rgba(99,102,241,0.4)]' 
+                                            : 'border-indigo-500/10 bg-indigo-950/30 hover:border-indigo-400/30 hover:bg-indigo-900/30'
                                         }
                                     `}
+                                    aria-label={`Select ${t.label} theme`}
+                                    aria-pressed={isSelected}
                                 >
-                                    {/* Inner Glow Layer */}
+                                    {/* Selection Glow / Gradient */}
                                     {isSelected && (
                                         <motion.div 
+                                            layoutId="selection-glow"
+                                            className={`absolute inset-0 bg-gradient-to-br ${t.color} opacity-20`}
                                             initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.2)_0%,transparent_100%)]" 
+                                            animate={{ opacity: 0.2 }}
+                                            exit={{ opacity: 0 }}
                                         />
                                     )}
 
-                                    <div className="relative z-10 flex flex-col items-center">
-                                        <span className={`text-5xl md:text-6xl mb-4 transition-all duration-700 
-                                            ${isSelected 
-                                                ? 'scale-125 rotate-6 brightness-125 drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]' 
-                                                : 'grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-110'
-                                            }`}
-                                        >
-                                            {t.icon}
-                                        </span>
-                                        <span className={`font-comic text-[10px] md:text-xs uppercase tracking-[0.2em] leading-none text-center transition-colors duration-500
-                                            ${isSelected ? 'text-white' : 'text-indigo-300/40'}`}>
-                                            {t.label}
-                                        </span>
-                                    </div>
+                                    {/* Large Icon */}
+                                    <span className={`text-5xl md:text-6xl mb-3 transition-all duration-500 transform
+                                        ${isSelected 
+                                            ? 'scale-110 drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]' 
+                                            : 'scale-100 opacity-60 grayscale group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-110'
+                                        }`}
+                                    >
+                                        {t.icon}
+                                    </span>
 
-                                    {/* Particle Sparkles for selected state */}
+                                    {/* Label */}
+                                    <span className={`font-comic text-[10px] md:text-xs font-bold uppercase tracking-[0.15em] text-center z-10 transition-colors
+                                        ${isSelected ? 'text-indigo-100' : 'text-indigo-400 group-hover:text-indigo-200'}`}>
+                                        {t.label}
+                                    </span>
+                                    
+                                    {/* Active Checkmark */}
                                     {isSelected && (
-                                        <div className="absolute inset-0 pointer-events-none">
-                                            {Array.from({ length: 4 }).map((_, i) => (
-                                                <motion.div
-                                                    key={i}
-                                                    initial={{ opacity: 0, scale: 0 }}
-                                                    animate={{ opacity: [0, 1, 0], scale: [0, 1, 0], x: [0, (i%2?20:-20)], y: [0, (i<2?20:-20)] }}
-                                                    transition={{ duration: 2, repeat: Infinity, delay: i * 0.5 }}
-                                                    className="absolute top-1/2 left-1/2 w-1 h-1 bg-white rounded-full"
-                                                />
-                                            ))}
-                                        </div>
+                                        <motion.div 
+                                            initial={{ scale: 0 }} animate={{ scale: 1 }}
+                                            className="absolute top-3 right-3 text-indigo-300"
+                                        >
+                                            <svg className="w-5 h-5 drop-shadow-sm" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                                        </motion.div>
                                     )}
                                 </motion.button>
                             );
                         })}
                     </div>
                     
+                    {/* Active Description Display */}
                     <div className="min-h-[4rem] bg-indigo-950/80 rounded-[2rem] p-5 border border-indigo-400/20 flex items-center justify-center text-center shadow-inner relative overflow-hidden group">
                         <div className="absolute top-0 left-0 w-2 h-full bg-indigo-500/20 group-hover:w-full transition-all duration-1000"></div>
                         <AnimatePresence mode="wait">
