@@ -2,14 +2,14 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
-*/
+ */
 
 import React, { useState, Suspense, lazy } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ApiKeyDialog } from './ApiKeyDialog';
+import { BackendHealthError } from './BackendHealthError';
 import { LoadingFX } from './LoadingFX';
 import { soundManager } from './SoundManager';
-import { useApiKey } from './useApiKey';
+import { useBackendHealth } from './useBackendHealth';
 import { useStoryEngine } from './hooks/useStoryEngine';
 import { useNarrationSync } from './hooks/useNarrationSync';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -21,11 +21,10 @@ const ReadingView = lazy(() => import('./components/ReadingView').then(m => ({ d
 
 const App: React.FC = () => {
     const { 
-        validateApiKey, 
-        setShowApiKeyDialog, 
-        showApiKeyDialog, 
-        handleApiKeyDialogContinue 
-    } = useApiKey();
+        checkHealth, 
+        showHealthError, 
+        handleErrorDismiss 
+    } = useBackendHealth();
 
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -61,7 +60,7 @@ const App: React.FC = () => {
         submitFeedback,
         saveUserPreferences,
         clearError
-    } = useStoryEngine(validateApiKey, setShowApiKeyDialog);
+    } = useStoryEngine(checkHealth);
 
     const { narrationTime, narrationDuration, playbackRate, setPlaybackRate } = useNarrationSync(isNarrating);
 
@@ -86,7 +85,7 @@ const App: React.FC = () => {
             )}
 
             <AnimatePresence>
-                {showApiKeyDialog && <ApiKeyDialog onContinue={handleApiKeyDialogContinue} />}
+                {showHealthError && <BackendHealthError onRetry={handleErrorDismiss} />}
                 {isSettingsOpen && (
                     <SettingsModal 
                         isOpen={isSettingsOpen}
