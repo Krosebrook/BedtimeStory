@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -281,7 +280,7 @@ export const SleepSetup: React.FC<SleepSetupProps> = ({ input, onChange, handleS
                             <span className={`text-2xl transition-transform duration-500 ${input.sleepConfig.ambientTheme === t.id ? 'scale-125 rotate-6' : ''}`}>
                                 {t.icon}
                             </span> 
-                            {t.label.split(' ')[0]}
+                            {t.label}
                         </button>
                     ))}
                 </div>

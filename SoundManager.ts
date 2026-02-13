@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -107,6 +106,13 @@ class SoundManager {
       this.ambientGain.gain.linearRampToValueAtTime(0.08, this.ctx!.currentTime + 4);
   }
 
+  private createPanner(): StereoPannerNode | null {
+      if (this.ctx && 'createStereoPanner' in this.ctx) {
+          return this.ctx.createStereoPanner();
+      }
+      return null;
+  }
+
   private setupCosmicHum() {
       // Deep Rumble
       const buffer = this.createNoiseBuffer('brown');
@@ -141,16 +147,36 @@ class SoundManager {
       lfo.start();
       this.activeLFOs.push(lfo);
 
+      // Add Stereo Panning for the Drones to create space
+      const panner = this.createPanner();
+      if (panner) {
+          const panLfo = this.ctx!.createOscillator();
+          panLfo.frequency.value = 0.1; // Slow rotation
+          const panGain = this.ctx!.createGain();
+          panGain.gain.value = 0.5;
+          panLfo.connect(panGain);
+          panGain.connect(panner.pan);
+          panLfo.start();
+          this.activeLFOs.push(panLfo);
+
+          drone1.connect(droneGain1);
+          drone2.connect(droneGain2);
+          droneGain1.connect(panner);
+          droneGain2.connect(panner);
+          panner.connect(this.ambientGain!);
+      } else {
+          drone1.connect(droneGain1);
+          droneGain1.connect(this.ambientGain!);
+          drone2.connect(droneGain2);
+          droneGain2.connect(this.ambientGain!);
+      }
+
       this.ambientSource.connect(filter);
       filter.connect(this.ambientGain!);
 
-      drone1.connect(droneGain1);
-      droneGain1.connect(this.ambientGain!);
       drone1.start();
       this.activeLFOs.push(drone1);
 
-      drone2.connect(droneGain2);
-      droneGain2.connect(this.ambientGain!);
       drone2.start();
       this.activeLFOs.push(drone2);
       
@@ -190,9 +216,25 @@ class SoundManager {
 
       this.ambientSource.connect(filter);
       filter.connect(this.ambientGain!);
-      this.secondarySource.connect(patterFilter);
-      patterFilter.connect(patterGain);
-      patterGain.connect(this.ambientGain!);
+      
+      // Pan the patter slightly for width
+      const panner = this.createPanner();
+      if (panner) {
+          const panLfo = this.ctx!.createOscillator();
+          panLfo.frequency.value = 0.2;
+          panLfo.connect(panner.pan);
+          panLfo.start();
+          this.activeLFOs.push(panLfo);
+          
+          this.secondarySource.connect(patterFilter);
+          patterFilter.connect(patterGain);
+          patterGain.connect(panner);
+          panner.connect(this.ambientGain!);
+      } else {
+          this.secondarySource.connect(patterFilter);
+          patterFilter.connect(patterGain);
+          patterGain.connect(this.ambientGain!);
+      }
       
       this.ambientSource.start();
       this.secondarySource.start();
@@ -245,9 +287,27 @@ class SoundManager {
       this.ambientSource.connect(windFilter);
       windFilter.connect(this.ambientGain!);
 
-      this.secondarySource.connect(leafFilter);
-      leafFilter.connect(leafGain);
-      leafGain.connect(this.ambientGain!);
+      // Pan the leaves
+      const panner = this.createPanner();
+      if (panner) {
+          const panLfo = this.ctx!.createOscillator();
+          panLfo.frequency.value = 0.05;
+          const panAmp = this.ctx!.createGain();
+          panAmp.gain.value = 0.6;
+          panLfo.connect(panAmp);
+          panAmp.connect(panner.pan);
+          panLfo.start();
+          this.activeLFOs.push(panLfo);
+          
+          this.secondarySource.connect(leafFilter);
+          leafFilter.connect(leafGain);
+          leafGain.connect(panner);
+          panner.connect(this.ambientGain!);
+      } else {
+          this.secondarySource.connect(leafFilter);
+          leafFilter.connect(leafGain);
+          leafGain.connect(this.ambientGain!);
+      }
 
       this.ambientSource.start();
       this.secondarySource.start();
@@ -299,13 +359,33 @@ class SoundManager {
       waveLfo.start();
       this.activeLFOs.push(waveLfo);
 
-      this.ambientSource.connect(waveFilter);
-      waveFilter.connect(waveGain);
-      waveGain.connect(this.ambientGain!);
+      // Pan the ocean movement
+      const panner = this.createPanner();
+      if (panner) {
+          const panLfo = this.ctx!.createOscillator();
+          panLfo.frequency.value = 0.05; // Slow roll
+          panLfo.connect(panner.pan);
+          panLfo.start();
+          this.activeLFOs.push(panLfo);
+          
+          this.ambientSource.connect(waveFilter);
+          waveFilter.connect(waveGain);
+          waveGain.connect(panner);
 
-      this.secondarySource.connect(sprayFilter);
-      sprayFilter.connect(sprayGain);
-      sprayGain.connect(this.ambientGain!);
+          this.secondarySource.connect(sprayFilter);
+          sprayFilter.connect(sprayGain);
+          sprayGain.connect(panner);
+          
+          panner.connect(this.ambientGain!);
+      } else {
+          this.ambientSource.connect(waveFilter);
+          waveFilter.connect(waveGain);
+          waveGain.connect(this.ambientGain!);
+
+          this.secondarySource.connect(sprayFilter);
+          sprayFilter.connect(sprayGain);
+          sprayGain.connect(this.ambientGain!);
+      }
 
       this.ambientSource.start();
       this.secondarySource.start();

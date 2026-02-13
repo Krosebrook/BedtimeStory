@@ -191,36 +191,30 @@ export class AIClient {
   static async generateAvatar(heroName: string, heroPower: string): Promise<string | null> {
     const ai = this.getAI();
     const prompt = `A professional children's book illustration portrait of ${heroName} who has the power of ${heroPower}. High-contrast, friendly, vibrant style. Close-up on the hero's face.`;
-    try {
-        return await this.retry(async () => {
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash-image',
-                contents: { parts: [{ text: prompt }] },
-            });
-            const part = response.candidates?.[0]?.content?.parts.find(p => p.inlineData);
-            return part?.inlineData ? `data:${part.inlineData.mimeType};base64,${part.inlineData.data}` : null;
-        }, 2, 1000);
-    } catch (e) {
-        console.error("Avatar Gen Error", e);
-        return null;
-    }
+    // We rethrow errors to allow the UI to handle them (e.g., showing 404 dialog)
+    return await this.retry(async () => {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: { parts: [{ text: prompt }] },
+        });
+        const part = response.candidates?.[0]?.content?.parts.find(p => p.inlineData);
+        if (!part?.inlineData) throw new Error("No image data received from API");
+        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+    }, 2, 1000);
   }
 
   static async generateSceneIllustration(context: string, heroDescription: string): Promise<string | null> {
     const ai = this.getAI();
     const prompt = `Vibrant children's storybook scene: ${context.substring(0, 400)}. Featuring: ${heroDescription}. Whimsical, magical atmosphere.`;
-    try {
-         return await this.retry(async () => {
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash-image',
-                contents: { parts: [{ text: prompt }] },
-            });
-            const part = response.candidates?.[0]?.content?.parts.find(p => p.inlineData);
-            return part?.inlineData ? `data:${part.inlineData.mimeType};base64,${part.inlineData.data}` : null;
-         }, 2, 1000);
-    } catch (e) {
-        console.error("Scene Gen Error", e);
-        return null;
-    }
+    // We rethrow errors to allow the UI to handle them
+    return await this.retry(async () => {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: { parts: [{ text: prompt }] },
+        });
+        const part = response.candidates?.[0]?.content?.parts.find(p => p.inlineData);
+        if (!part?.inlineData) throw new Error("No image data received from API");
+        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+     }, 2, 1000);
   }
 }
