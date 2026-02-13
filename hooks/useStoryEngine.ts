@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -194,7 +195,8 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
              setError("You are offline. Connect to internet to generate avatar.");
              return;
         }
-        const name = input.mode === 'classic' ? input.heroName : (input.mode === 'sleep' ? input.heroName : input.madlibs.animal);
+        
+        const name = input.mode === 'classic' || input.mode === 'sleep' ? input.heroName : input.madlibs.animal;
         const power = input.mode === 'classic' ? input.heroPower : (input.mode === 'sleep' ? 'Sleeping' : input.madlibs.adjective);
         
         if (!name || name.trim().length === 0) {

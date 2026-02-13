@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -25,7 +26,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = ({ activeMode, onModeChange
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { scrollY } = useScroll();
 
-    // Parallax effects - purely vertical scroll based, no mouse tilt to avoid jank
+    // Parallax effects
     const y = useTransform(scrollY, [0, 300], [0, 100]);
     const opacity = useTransform(scrollY, [0, 300], [1, 0]);
     const scale = useTransform(scrollY, [0, 300], [1, 0.95]);
@@ -47,7 +48,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = ({ activeMode, onModeChange
     const getBgGradient = () => {
         switch(activeMode) {
             case 'madlibs': return "from-red-900 via-orange-950 to-black";
-            case 'sleep': return "from-[#020617] via-[#0f172a] to-black"; // Deep night sky
+            case 'sleep': return "from-[#020617] via-[#0f172a] to-black";
             default: return "from-blue-900 via-slate-900 to-black";
         }
     };
@@ -116,40 +117,9 @@ export const HeroHeader: React.FC<HeroHeaderProps> = ({ activeMode, onModeChange
                                 }}
                             />
                         ))}
-                        
-                        {/* Shooting Star */}
-                        <motion.div 
-                            className="absolute w-[150px] h-[2px] bg-gradient-to-r from-transparent via-white to-transparent"
-                            style={{ 
-                                rotate: '45deg',
-                                boxShadow: '0 0 10px 1px rgba(255,255,255,0.4)'
-                            }}
-                            initial={{ top: '-10%', left: '10%', opacity: 0, scaleX: 0.5 }}
-                            animate={{ 
-                                top: '80%', 
-                                left: '120%', 
-                                opacity: [0, 1, 0],
-                                scaleX: [0.5, 1.2, 0.5]
-                            }}
-                            transition={{
-                                duration: 2,
-                                repeat: Infinity,
-                                repeatDelay: 8,
-                                ease: "easeIn"
-                            }}
-                        />
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            {/* Ambient Glow */}
-            <motion.div 
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] rounded-full blur-[100px] transition-colors duration-1000 z-0"
-                style={{ 
-                    backgroundColor: activeMode === 'sleep' ? 'rgba(30, 27, 75, 0.3)' : (activeMode === 'madlibs' ? '#ef4444' : '#2563eb'),
-                    opacity: activeMode === 'sleep' ? 0.3 : 0.4
-                }}
-            />
 
             {/* Content Container */}
             <motion.div 
@@ -159,22 +129,20 @@ export const HeroHeader: React.FC<HeroHeaderProps> = ({ activeMode, onModeChange
                 {/* Logo Block */}
                 <div 
                     onClick={handleLogoClick}
-                    className={`text-center space-y-2 group ${onImageUpload ? 'cursor-pointer hover:scale-105 transition-transform' : 'cursor-default'}`}
-                    title={onImageUpload ? "Click to upload your own hero image" : ""}
+                    className={`text-center space-y-0 md:space-y-2 group ${onImageUpload ? 'cursor-pointer hover:scale-105 transition-transform' : 'cursor-default'}`}
                 >
-                    {/* Fixed visual glitch by removing bg-clip-text which sometimes renders as a white box on white backgrounds */}
-                    <h1 className="font-comic text-6xl md:text-8xl lg:text-9xl leading-[0.8] tracking-tighter text-white drop-shadow-[0_4px_0_rgba(0,0,0,0.4)] py-4 px-8">
+                    <h1 className="font-comic text-6xl md:text-8xl lg:text-9xl leading-none tracking-tighter text-white drop-shadow-[0_4px_0_rgba(0,0,0,0.6)] py-2">
                         INFINITY
                     </h1>
-                    <h1 className={`font-comic text-6xl md:text-8xl lg:text-9xl leading-[0.8] tracking-tighter transition-colors duration-500 drop-shadow-[0_4px_0_rgba(0,0,0,0.4)]
-                        ${activeMode === 'sleep' ? 'text-indigo-300' : (activeMode === 'madlibs' ? 'text-yellow-400' : 'text-yellow-400')}`}
+                    <h1 className={`font-comic text-6xl md:text-8xl lg:text-9xl leading-none tracking-tighter transition-colors duration-500 drop-shadow-[0_4px_0_rgba(0,0,0,0.6)]
+                        ${activeMode === 'sleep' ? 'text-indigo-400' : (activeMode === 'madlibs' ? 'text-yellow-400' : 'text-blue-400')}`}
                     >
                         HEROES
                     </h1>
                 </div>
 
-                {/* Animated Tagline */}
-                <div className="mt-8 h-8 flex items-center justify-center overflow-hidden">
+                {/* Tagline */}
+                <div className="mt-8 h-8 flex items-center justify-center">
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={activeMode}
@@ -184,7 +152,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = ({ activeMode, onModeChange
                             className="flex items-center gap-4"
                         >
                             <div className="h-px w-8 bg-white/30" />
-                            <p className="font-mono text-xs md:text-sm font-bold uppercase tracking-[0.3em] text-white/80 text-center min-w-[180px]">
+                            <p className="font-mono text-xs md:text-sm font-bold uppercase tracking-[0.3em] text-white/80 text-center">
                                 {activeConfig.tagline}
                             </p>
                             <div className="h-px w-8 bg-white/30" />
@@ -193,13 +161,9 @@ export const HeroHeader: React.FC<HeroHeaderProps> = ({ activeMode, onModeChange
                 </div>
             </motion.div>
 
-            {/* Floating Mode Dock (The Circled Area) */}
+            {/* Floating Mode Dock */}
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 z-20 w-full max-w-lg px-4">
-                <div 
-                    className="bg-slate-900/90 backdrop-blur-xl border border-white/10 p-2 rounded-2xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] flex items-center justify-between gap-2 md:gap-4 relative ring-1 ring-white/5"
-                    role="tablist"
-                    aria-label="Game Modes"
-                >
+                <div className="bg-slate-900/90 backdrop-blur-xl border border-white/10 p-2 rounded-2xl shadow-2xl flex items-center justify-between gap-2 md:gap-4 relative ring-1 ring-white/5">
                     {MODES.map((mode) => {
                         const isActive = activeMode === mode.id;
                         return (
@@ -207,11 +171,7 @@ export const HeroHeader: React.FC<HeroHeaderProps> = ({ activeMode, onModeChange
                                 key={mode.id}
                                 onClick={() => { onModeChange(mode.id); soundManager.playChoice(); }}
                                 className="relative flex-1 group outline-none"
-                                role="tab"
-                                aria-selected={isActive}
-                                aria-controls={`panel-${mode.id}`}
                             >
-                                {/* Active Background Pill */}
                                 {isActive && (
                                     <motion.div
                                         layoutId="activeTab"
@@ -219,9 +179,8 @@ export const HeroHeader: React.FC<HeroHeaderProps> = ({ activeMode, onModeChange
                                         transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                                     />
                                 )}
-
-                                <div className={`relative z-10 flex flex-col items-center py-3 px-2 transition-colors duration-300 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>
-                                    <span className="text-2xl md:text-3xl mb-1 filter drop-shadow-lg">{mode.icon}</span>
+                                <div className={`relative z-10 flex flex-col items-center py-3 px-2 transition-colors duration-300 ${isActive ? 'text-white' : 'text-slate-400'}`}>
+                                    <span className="text-2xl md:text-3xl mb-1">{mode.icon}</span>
                                     <span className="font-bold text-[10px] uppercase tracking-wider">{mode.label}</span>
                                 </div>
                             </button>

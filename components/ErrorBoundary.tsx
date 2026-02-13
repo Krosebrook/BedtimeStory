@@ -1,9 +1,10 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { ErrorInfo, ReactNode } from "react";
+import React, { Component, ErrorInfo, ReactNode } from "react";
 
 interface Props {
   children?: ReactNode;
@@ -19,9 +20,11 @@ interface State {
  * ErrorBoundary component to catch rendering errors and show a comic-themed fallback.
  * Inheriting from Component ensures props and setState are correctly recognized by TypeScript.
  */
-export class ErrorBoundary extends React.Component<Props, State> {
+// Fix: Extending Component directly from react ensures that inherited members like state, props, and setState are correctly typed
+export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
+    // Fix: state is an inherited property from Component
     this.state = {
       hasError: false,
       error: null,
@@ -37,6 +40,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   render() {
+    // Fix: access state and props which are inherited from Component
     const { hasError, error } = this.state;
     const { children, fallback } = this.props;
 
@@ -51,6 +55,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
             {error instanceof Error ? error.message : "Unknown error"}
           </div>
           <button 
+            // Fix: setState is a method inherited from Component
             onClick={() => this.setState({ hasError: false, error: null })}
             className="comic-btn bg-blue-500 text-white px-6 py-2 hover:bg-blue-400"
           >

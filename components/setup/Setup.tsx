@@ -12,6 +12,7 @@ import { LoadingFX } from '../../LoadingFX';
 import { ModeSetup } from './ModeSetup';
 import { VoiceSelector } from './VoiceSelector';
 import { MemoryJar } from './MemoryJar';
+import { LengthSlider } from './SetupShared';
 import { soundManager } from '../../SoundManager';
 
 interface SetupProps {
@@ -33,9 +34,6 @@ interface SetupProps {
     onOpenSettings: () => void;
 }
 
-/**
- * Helper to determine if the current configuration is valid for launch.
- */
 const checkIsReady = (input: StoryState): boolean => {
     switch (input.mode) {
         case 'sleep':
@@ -49,9 +47,6 @@ const checkIsReady = (input: StoryState): boolean => {
     }
 };
 
-/**
- * Helper to get the context-aware label for the primary action button.
- */
 const getLaunchButtonText = (mode: AppMode, isLoading: boolean): string => {
     if (isLoading) return 'INITIATING...';
     return mode === 'sleep' ? 'BEGIN DREAM-LOG' : 'ENGAGE MISSION';
@@ -87,7 +82,6 @@ export const Setup: React.FC<SetupProps> = ({
                     onClick={() => { setIsMemoryJarOpen(true); soundManager.playChoice(); }}
                     className="w-12 h-12 bg-indigo-900 rounded-full border-4 border-black flex items-center justify-center text-2xl shadow-[4px_4px_0px_black] hover:scale-110 transition-transform active:scale-95"
                     aria-label="Open Memory Jar"
-                    title="Saved Stories"
                 >
                     🏺
                 </button>
@@ -95,7 +89,6 @@ export const Setup: React.FC<SetupProps> = ({
                     onClick={() => { onOpenSettings(); soundManager.playChoice(); }}
                     className="w-12 h-12 bg-white rounded-full border-4 border-black flex items-center justify-center text-2xl shadow-[4px_4px_0px_black] hover:scale-110 transition-transform hover:rotate-90 active:scale-95"
                     aria-label="Settings"
-                    title="Settings"
                 >
                     ⚙️
                 </button>
@@ -106,12 +99,12 @@ export const Setup: React.FC<SetupProps> = ({
                     soundManager.playSparkle();
                 }} />
 
-            <div className="max-w-4xl w-full">
+            <div className="max-w-4xl w-full relative">
                 <motion.section 
                     layout 
                     className={`border-[6px] border-black shadow-[12px_12px_0px_rgba(30,58,138,0.3)] p-4 md:p-10 relative z-20 rounded-sm flex flex-col min-h-[450px] md:min-h-[500px] overflow-hidden transition-colors duration-1000 ${input.mode === 'sleep' ? 'bg-indigo-950 text-indigo-50' : 'bg-white text-black'}`}
                 >
-                    {/* Embedded Loading Overlay */}
+                    {/* Embedded LoadingFX when active */}
                     <AnimatePresence>
                         {isLoading && (
                             <LoadingFX 
@@ -153,6 +146,12 @@ export const Setup: React.FC<SetupProps> = ({
                         />
                     </div>
 
+                    <LengthSlider 
+                        value={input.storyLength}
+                        onChange={(v) => onChange('storyLength', v)}
+                        mode={input.mode}
+                    />
+
                     <VoiceSelector 
                         selectedVoice={input.narratorVoice}
                         onVoiceChange={(v) => onChange('narratorVoice', v)}
@@ -162,7 +161,7 @@ export const Setup: React.FC<SetupProps> = ({
                     <button 
                         onClick={onLaunch} 
                         disabled={!isReady || isLoading || !isOnline} 
-                        className={`comic-btn w-full mt-10 md:mt-12 py-5 md:py-6 text-2xl md:text-4xl rounded-2xl transition-all ${isReady && !isLoading ? (input.mode === 'sleep' ? 'bg-indigo-600 text-white border-white shadow-[0_10px_40px_rgba(99,102,241,0.5)]' : 'bg-red-600 text-white shadow-[10px_10px_0px_black] active:translate-y-1') : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none border-slate-300'}`} 
+                        className={`comic-btn w-full mt-10 md:mt-12 py-5 md:py-6 text-2xl md:text-4xl rounded-2xl transition-all ${isReady && !isLoading ? (input.mode === 'sleep' ? 'bg-indigo-600 text-white border-white shadow-xl shadow-indigo-500/30' : 'bg-red-600 text-white shadow-[10px_10px_0px_black] active:translate-y-1') : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none border-slate-300'}`} 
                         aria-label="Start Story"
                     >
                         {launchButtonText}
@@ -170,7 +169,6 @@ export const Setup: React.FC<SetupProps> = ({
                 </motion.section>
             </div>
 
-            {/* Collapsible Memory Jar Drawer */}
             <MemoryJar 
                 isOpen={isMemoryJarOpen}
                 onClose={() => setIsMemoryJarOpen(false)}

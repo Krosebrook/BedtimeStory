@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -188,7 +189,7 @@ export const LoadingFX: React.FC<LoadingFXProps> = ({ embedded = false, mode = '
                 })}
             </div>
 
-            {/* Floating Words (Only in active modes, logic moved to useEffect but rendered here) */}
+            {/* Floating Words */}
             <AnimatePresence>
                 {particles.map(p => (
                     <motion.div 
@@ -210,7 +211,7 @@ export const LoadingFX: React.FC<LoadingFXProps> = ({ embedded = false, mode = '
             </AnimatePresence>
 
             {/* Central Focal Point */}
-            <div className="relative z-30 text-center flex flex-col items-center p-6 w-full max-w-2xl">
+            <div className={`relative z-30 text-center flex flex-col items-center w-full max-w-2xl ${embedded ? 'p-2' : 'p-6'}`}>
                 <motion.div 
                     initial={{ scale: 0.8 }}
                     animate={{ 
@@ -219,7 +220,7 @@ export const LoadingFX: React.FC<LoadingFXProps> = ({ embedded = false, mode = '
                         filter: ["brightness(100%)", "brightness(130%)", "brightness(100%)"]
                     }}
                     transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                    className={`${embedded ? 'w-32 h-32 md:w-48 md:h-48 mb-6' : 'w-40 h-40 md:w-64 md:h-64 mb-10'} relative flex items-center justify-center`}
+                    className={`${embedded ? 'w-24 h-24 md:w-32 md:h-32 mb-4' : 'w-40 h-40 md:w-64 md:h-64 mb-10'} relative flex items-center justify-center`}
                 >
                     {/* Glowing Auras */}
                     <div className={`absolute inset-0 rounded-full blur-[60px] opacity-40 animate-pulse ${mode === 'sleep' ? 'bg-indigo-500' : (mode === 'madlibs' ? 'bg-orange-500' : 'bg-blue-500')}`}></div>
@@ -229,24 +230,24 @@ export const LoadingFX: React.FC<LoadingFXProps> = ({ embedded = false, mode = '
                     <div className="absolute inset-2 border-4 border-dashed border-white/20 rounded-full animate-[spin_8s_linear_infinite]"></div>
                     <div className="absolute inset-6 border-2 border-dotted border-white/40 rounded-full animate-[spin_12s_linear_infinite_reverse]"></div>
 
-                    <span className={`${embedded ? 'text-6xl md:text-8xl' : 'text-8xl md:text-[10rem]'} relative z-10 drop-shadow-[0_0_30px_rgba(255,255,255,0.6)]`}>
+                    <span className={`${embedded ? 'text-5xl md:text-6xl' : 'text-8xl md:text-[10rem]'} relative z-10 drop-shadow-[0_0_30px_rgba(255,255,255,0.6)]`}>
                         {icon}
                     </span>
                 </motion.div>
                 
-                <h2 className={`font-comic ${embedded ? 'text-3xl md:text-5xl' : 'text-5xl md:text-7xl'} text-white mb-6 uppercase tracking-[0.05em] drop-shadow-[4px_4px_0px_#000]`}>
+                <h2 className={`font-comic ${embedded ? 'text-2xl md:text-4xl' : 'text-5xl md:text-7xl'} text-white mb-2 md:mb-6 uppercase tracking-[0.05em] drop-shadow-[4px_4px_0px_#000]`}>
                     {title}
                 </h2>
                 
                 {/* Status Message Flipper */}
-                <div className="h-12 flex items-center justify-center overflow-hidden w-full">
+                <div className={`${embedded ? 'h-8' : 'h-12'} flex items-center justify-center overflow-hidden w-full`}>
                     <AnimatePresence mode="wait">
                         <motion.p 
                             key={stepIndex}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
-                            className={`font-serif ${embedded ? 'text-lg md:text-2xl' : 'text-xl md:text-3xl'} text-white/80 italic font-medium tracking-wide`}
+                            className={`font-serif ${embedded ? 'text-base md:text-xl' : 'text-xl md:text-3xl'} text-white/80 italic font-medium tracking-wide`}
                         >
                             {steps[stepIndex]}
                         </motion.p>
@@ -255,8 +256,8 @@ export const LoadingFX: React.FC<LoadingFXProps> = ({ embedded = false, mode = '
             </div>
 
             {/* High-Tech Progress Bar */}
-            <div className={`mt-8 md:mt-12 flex flex-col items-center gap-3 w-full max-w-lg px-8 relative z-30 ${embedded ? 'scale-90' : 'scale-100'}`}>
-                <div className="w-full h-8 bg-black/50 rounded-full border-4 border-white/20 overflow-hidden relative shadow-[0_10px_20px_rgba(0,0,0,0.5)] backdrop-blur-md">
+            <div className={`mt-4 md:mt-12 flex flex-col items-center gap-2 w-full max-w-lg px-8 relative z-30 ${embedded ? 'scale-90' : 'scale-100'}`}>
+                <div className={`${embedded ? 'h-6' : 'h-8'} w-full bg-black/50 rounded-full border-4 border-white/20 overflow-hidden relative shadow-[0_10px_20px_rgba(0,0,0,0.5)] backdrop-blur-md`}>
                     {/* Striped Background */}
                     <div className="absolute inset-0 opacity-20 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_25%,rgba(255,255,255,0.2)_50%,transparent_50%,transparent_75%,rgba(255,255,255,0.2)_75%,rgba(255,255,255,0.2)_100%)] bg-[length:20px_20px]"></div>
                     
@@ -270,7 +271,7 @@ export const LoadingFX: React.FC<LoadingFXProps> = ({ embedded = false, mode = '
                         <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.6),transparent)] animate-[shimmer_1.5s_infinite]"></div>
                     </motion.div>
                 </div>
-                <div className="flex justify-between w-full font-mono text-xs md:text-sm text-white/60 uppercase font-bold tracking-[0.2em]">
+                <div className="flex justify-between w-full font-mono text-[10px] md:text-sm text-white/60 uppercase font-bold tracking-[0.2em]">
                     <span className="animate-pulse">Processing...</span>
                     <span>{Math.floor(progress)}%</span>
                 </div>

@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -82,17 +83,6 @@ export const Setup: React.FC<SetupProps> = ({
     return (
         <main className="min-h-screen w-full bg-slate-950 flex flex-col items-center py-6 md:py-10 px-4 md:px-8 overflow-y-auto" role="main">
             
-            {/* Full Screen Loading Overlay with Dynamic Context */}
-            <AnimatePresence>
-                {isLoading && (
-                    <LoadingFX 
-                        embedded={false} 
-                        mode={input.mode} 
-                        heroName={input.mode === 'madlibs' ? input.madlibs.animal : input.heroName} 
-                    />
-                )}
-            </AnimatePresence>
-
             {/* Utility Bar */}
             <div className="absolute top-4 right-4 z-50 flex gap-4">
                 <button 
@@ -123,6 +113,17 @@ export const Setup: React.FC<SetupProps> = ({
                     layout 
                     className={`border-[6px] border-black shadow-[12px_12px_0px_rgba(30,58,138,0.3)] p-4 md:p-10 relative z-20 rounded-sm flex flex-col min-h-[450px] md:min-h-[500px] overflow-hidden transition-colors duration-1000 ${input.mode === 'sleep' ? 'bg-indigo-950 text-indigo-50' : 'bg-white text-black'}`}
                 >
+                    {/* Embedded Loading Overlay with Dynamic Context */}
+                    <AnimatePresence>
+                        {isLoading && (
+                            <LoadingFX 
+                                embedded={true} 
+                                mode={input.mode} 
+                                heroName={input.mode === 'madlibs' ? input.madlibs.animal : input.heroName} 
+                            />
+                        )}
+                    </AnimatePresence>
+
                     <AnimatePresence>
                         {error && (
                             <motion.div 
