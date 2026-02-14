@@ -93,8 +93,6 @@ export async function scanBuildArtifacts(distDir = 'dist') {
     const fileFindings = scanFile(filePath, SECURITY_PATTERNS);
     
     for (const finding of fileFindings) {
-      if (finding.error) continue;
-      
       if (finding.pattern === 'apiKey') {
         apiKeyFindings.push(finding);
       } else if (finding.pattern === 'envReference') {
@@ -154,17 +152,16 @@ export async function scanSourceCode() {
 
     const content = readFileSync(file, 'utf-8');
     const usesRequireEnv = content.includes('requireEnv');
+    
+    tracker.recordTest(
+      `${file} uses requireEnv()`,
+      usesRequireEnv,
+      usesRequireEnv ? 'Properly validated' : 'Missing requireEnv() call'
+    );
+    
     if (!usesRequireEnv) {
       allValid = false;
     }
-  }
-
-  if (allValid) {
-    tracker.recordTest(
-      'API files use requireEnv() for secrets',
-      true,
-      'All API routes properly validated'
-    );
   }
 
   // Check vite.config.ts doesn't inject secrets
