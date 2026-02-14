@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test:smoke": "node smoke-test.js http://localhost:3000"
+    "test:smoke": "node smoke-test.js http://localhost:3000",
+    "test:deploy": "node tests/deploy-verification.js",
+    "test:security": "node tests/deploy-verification.js --security-only",
+    "test:functional": "node tests/deploy-verification.js --functional-only",
+    "test:deploy:fast": "node tests/deploy-verification.js --skip-rate-limit"
   },
   "dependencies": {
     "react-dom": "^19.2.3",
