@@ -12,7 +12,7 @@ import { soundManager } from '../SoundManager';
 import { storageManager, CachedStory } from '../lib/StorageManager';
 import { logger } from '../lib/Logger';
 
-export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowApiKeyDialog: (show: boolean) => void) => {
+export const useStoryEngine = (checkHealth: () => Promise<boolean>) => {
     const [phase, setPhase] = useState<AppPhase>('setup');
     const [isLoading, setIsLoading] = useState(false);
     const [isAvatarLoading, setIsAvatarLoading] = useState(false);
@@ -204,7 +204,7 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
             return;
         }
 
-        if (!(await validateApiKey())) return;
+        if (!(await checkHealth())) return;
 
         setIsAvatarLoading(true);
         setError(null);
@@ -216,22 +216,18 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
             }
         } catch (error: any) {
             logger.error("Avatar generation failed", error);
-            if (error.message?.includes("404")) {
-                setShowApiKeyDialog(true);
-            } else {
-                setError(`Avatar Error: ${error.message || "Could not generate hero."}`);
-            }
+            setError(`Avatar Error: ${error.message || "Could not generate hero."}`);
         } finally {
             setIsAvatarLoading(false);
         }
-    }, [input, validateApiKey, handleInputChange, setShowApiKeyDialog, isOnline]);
+    }, [input, checkHealth, handleInputChange, isOnline]);
 
     const generateStory = useCallback(async () => {
         if (!isOnline) {
             setError("You are currently offline. Please connect to the internet to generate a new story.");
             return;
         }
-        if (!(await validateApiKey())) return;
+        if (!(await checkHealth())) return;
         
         setIsLoading(true);
         setError(null);
@@ -249,20 +245,16 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
             soundManager.playPageTurn();
         } catch (error: any) {
             logger.error("Story generation failed", error);
-            if (error.message?.includes("404")) {
-                setShowApiKeyDialog(true);
-            } else {
-                const msg = error.message || "Unknown error";
-                setError(msg.includes("API_KEY") ? "Invalid API Key configuration." : `Mission Failed: ${msg}`);
-            }
+            const msg = error.message || "Unknown error";
+            setError(msg.includes("API_KEY") ? "Invalid API Key configuration." : `Mission Failed: ${msg}`);
         } finally {
             setIsLoading(false);
         }
-    }, [input, validateApiKey, setShowApiKeyDialog, isOnline]);
+    }, [input, checkHealth, isOnline]);
 
     const generateScene = useCallback(async (index: number) => {
         if (!story || !currentStoryId || isSceneLoading || !isOnline) return;
-        if (!(await validateApiKey())) return;
+        if (!(await checkHealth())) return;
         
         setIsSceneLoading(true);
         try {
@@ -275,11 +267,10 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
             }
         } catch (error: any) {
             logger.error('Scene generation failed', error);
-            if (error.message?.includes("404")) setShowApiKeyDialog(true);
         } finally {
             setIsSceneLoading(false);
         }
-    }, [story, currentStoryId, input, isSceneLoading, isOnline, validateApiKey, setShowApiKeyDialog]);
+    }, [story, currentStoryId, input, isSceneLoading, isOnline, checkHealth]);
 
     const generateCurrentScene = useCallback(() => {
         generateScene(currentPartIndex);

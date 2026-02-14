@@ -1,9 +1,8 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
-*/
+ */
 
-import { GoogleGenAI, Modality } from "@google/genai";
 import { storageManager } from "./lib/StorageManager";
 
 /**
@@ -103,7 +102,7 @@ export class NarrationManager {
   }
 
   /**
-   * Fetches TTS audio from Gemini API or retrieves from persistent cache.
+   * Fetches TTS audio from API endpoint or retrieves from persistent cache.
    * @param text The text to read.
    * @param voiceName The voice profile to use.
    * @param autoPlay If true, starts playback immediately after loading. If false, just caches.
@@ -136,34 +135,28 @@ export class NarrationManager {
         console.warn("Offline audio cache miss", e);
     }
 
-    // 3. Fetch from Gemini API
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // 3. Fetch from API endpoint
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-preview-tts",
-        contents: [{ parts: [{ text: text }] }],
-        config: {
-          responseModalities: [Modality.AUDIO],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: voiceName },
-            },
-          },
-        },
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voiceName }),
       });
 
-      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-      if (base64Audio) {
-        const bytes = this.decode(base64Audio);
-        
-        // Persist for offline use
-        storageManager.saveAudio(cacheKey, bytes.buffer).catch(err => console.error("Save audio failed", err));
-        
-        const buffer = await this.decodeAudioData(bytes, this.audioCtx!);
-        this.memoryCache.set(cacheKey, buffer);
-        this.currentBuffer = buffer;
-        if (autoPlay) this.play();
+      if (!response.ok) {
+        throw new Error(`TTS API error: ${response.status}`);
       }
+
+      const data = await response.json();
+      const bytes = this.decode(data.base64);
+      
+      // Persist for offline use
+      storageManager.saveAudio(cacheKey, bytes.buffer).catch(err => console.error("Save audio failed", err));
+      
+      const buffer = await this.decodeAudioData(bytes, this.audioCtx!);
+      this.memoryCache.set(cacheKey, buffer);
+      this.currentBuffer = buffer;
+      if (autoPlay) this.play();
     } catch (error) {
       console.error("TTS synthesis failed", error);
     }
