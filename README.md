@@ -33,5 +33,31 @@ Infinity Heroes is an interactive, AI-driven bedtime story application designed 
 2. Install dependencies: `npm install`
 3. Start development server: `npm run dev`
 
+## 🧪 Testing & Deployment Verification
+Comprehensive test suite for validating deployment readiness and security:
+
+```bash
+# Run full deployment verification (requires server running)
+npm run test:deploy
+
+# Run security scans only (fast, no server needed)
+npm run test:security
+
+# Run functional API tests only (requires server)
+npm run test:functional
+
+# Quick deployment check (skips slow rate-limit tests)
+npm run test:deploy:fast
+```
+
+### What's Tested
+- ✅ **Security**: API key leaks, environment variable exposure, source code scanning
+- ✅ **Functionality**: All API endpoints (health, story, image, TTS)
+- ✅ **CORS**: Proper headers configuration
+- ✅ **Rate Limiting**: Validates throttling behavior
+- ✅ **Build Artifacts**: Ensures no secrets in production build
+
+See [DEPLOY_CHECKLIST.md](DEPLOY_CHECKLIST.md) for the complete deployment security checklist.
+
 ## 🤝 Contribution Guidelines
 Please refer to `ARCHITECTURE.md` for the internal data flow and `CHILD_SAFETY_COMPLIANCE.md` for UX guardrails.
