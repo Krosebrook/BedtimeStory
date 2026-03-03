@@ -1,0 +1,38 @@
+{
+  "name": "Infinity Heroes: Bedtime Chronicles",
+  "short_name": "Infinity Heroes",
+  "description": "Interactive AI bedtime stories with 6x longer deep-slumber narratives and soothing voices.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "orientation": "portrait",
+  "id": "com.infinityheroes.bedtime",
+  "categories": [
+    "education",
+    "entertainment",
+    "lifestyle"
+  ],
+  "icons": [
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Story",
+      "url": "/",
+      "description": "Start a new adventure"
+    }
+  ],
+  "screenshots": []
+}

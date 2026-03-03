@@ -88,8 +88,8 @@ class SoundManager {
           case 'rain': // Gentle Rain
               this.setupGentleRain();
               break;
-          case 'forest': // Forest Night
-              this.setupForestNight();
+          case 'forest': // Forest Ambiance
+              this.setupForestAmbiance();
               break;
           case 'magic': // Ethereal
               this.setupEthereal();
@@ -99,6 +99,9 @@ class SoundManager {
               break;
           case 'crickets': // Summer Night
               this.setupSummerNight();
+              break;
+          case 'campfire': // Crackling Campfire
+              this.setupCampfire();
               break;
       }
 
@@ -137,6 +140,22 @@ class SoundManager {
       const droneGain2 = this.ctx!.createGain();
       droneGain2.gain.value = 0.03;
 
+      // Higher harmonic shimmer
+      const shimmer = this.ctx!.createOscillator();
+      shimmer.type = 'sine';
+      shimmer.frequency.value = 220;
+      const shimmerGain = this.ctx!.createGain();
+      shimmerGain.gain.value = 0.005;
+      
+      const shimmerLfo = this.ctx!.createOscillator();
+      shimmerLfo.frequency.value = 0.1;
+      const shimmerLfoGain = this.ctx!.createGain();
+      shimmerLfoGain.gain.value = 0.005;
+      shimmerLfo.connect(shimmerLfoGain);
+      shimmerLfoGain.connect(shimmerGain.gain);
+      shimmerLfo.start();
+      this.activeLFOs.push(shimmerLfo);
+
       // Filter modulation LFO
       const lfo = this.ctx!.createOscillator();
       lfo.frequency.value = 0.05;
@@ -161,14 +180,18 @@ class SoundManager {
 
           drone1.connect(droneGain1);
           drone2.connect(droneGain2);
+          shimmer.connect(shimmerGain);
           droneGain1.connect(panner);
           droneGain2.connect(panner);
+          shimmerGain.connect(panner);
           panner.connect(this.ambientGain!);
       } else {
           drone1.connect(droneGain1);
           droneGain1.connect(this.ambientGain!);
           drone2.connect(droneGain2);
           droneGain2.connect(this.ambientGain!);
+          shimmer.connect(shimmerGain);
+          shimmerGain.connect(this.ambientGain!);
       }
 
       this.ambientSource.connect(filter);
@@ -179,6 +202,9 @@ class SoundManager {
 
       drone2.start();
       this.activeLFOs.push(drone2);
+
+      shimmer.start();
+      this.activeLFOs.push(shimmer);
       
       this.ambientSource.start();
   }
@@ -214,9 +240,37 @@ class SoundManager {
       lfo.start();
       this.activeLFOs.push(lfo);
 
+      // Distant Thunder
+      const thunderBuffer = this.createNoiseBuffer('brown');
+      const thunderSource = this.ctx!.createBufferSource();
+      thunderSource.buffer = thunderBuffer;
+      thunderSource.loop = true;
+      
+      const thunderFilter = this.ctx!.createBiquadFilter();
+      thunderFilter.type = 'lowpass';
+      thunderFilter.frequency.value = 100;
+      
+      const thunderGain = this.ctx!.createGain();
+      thunderGain.gain.value = 0;
+
+      const thunderTrigger = () => {
+          if (!this.isAmbientPlaying) return;
+          const now = this.ctx!.currentTime;
+          thunderGain.gain.setTargetAtTime(0.3, now, 1);
+          thunderGain.gain.setTargetAtTime(0, now + 2, 4);
+          setTimeout(thunderTrigger, 15000 + Math.random() * 30000);
+      };
+      setTimeout(thunderTrigger, 10000);
+
       this.ambientSource.connect(filter);
       filter.connect(this.ambientGain!);
       
+      thunderSource.connect(thunderFilter);
+      thunderFilter.connect(thunderGain);
+      thunderGain.connect(this.ambientGain!);
+      thunderSource.start();
+      this.activeLFOs.push(thunderSource as any); // Hack to keep track for stopping
+
       // Pan the patter slightly for width
       const panner = this.createPanner();
       if (panner) {
@@ -240,7 +294,7 @@ class SoundManager {
       this.secondarySource.start();
   }
 
-  private setupForestNight() {
+  private setupForestAmbiance() {
       // Wind base (Pink Noise)
       const windBuffer = this.createNoiseBuffer('pink');
       this.ambientSource = this.ctx!.createBufferSource();
@@ -263,6 +317,35 @@ class SoundManager {
       
       const leafGain = this.ctx!.createGain();
       leafGain.gain.value = 0.04;
+
+      // Procedural Bird/Owl Calls
+      const birdOsc = this.ctx!.createOscillator();
+      birdOsc.type = 'sine';
+      const birdGain = this.ctx!.createGain();
+      birdGain.gain.value = 0;
+
+      const birdTrigger = () => {
+          if (!this.isAmbientPlaying) return;
+          const now = this.ctx!.currentTime;
+          const isOwl = Math.random() > 0.5;
+          
+          if (isOwl) {
+              birdOsc.frequency.setValueAtTime(200, now);
+              birdGain.gain.setTargetAtTime(0.02, now, 0.1);
+              birdGain.gain.setTargetAtTime(0, now + 0.5, 0.2);
+              birdGain.gain.setTargetAtTime(0.02, now + 0.8, 0.1);
+              birdGain.gain.setTargetAtTime(0, now + 1.3, 0.2);
+          } else {
+              birdOsc.frequency.setValueAtTime(1500 + Math.random() * 1000, now);
+              birdGain.gain.setTargetAtTime(0.01, now, 0.05);
+              birdGain.gain.setTargetAtTime(0, now + 0.2, 0.1);
+          }
+          
+          setTimeout(birdTrigger, 5000 + Math.random() * 15000);
+      };
+      setTimeout(birdTrigger, 3000);
+      birdOsc.start();
+      this.activeLFOs.push(birdOsc);
 
       // LFO for wind swelling
       const lfo = this.ctx!.createOscillator();
@@ -287,6 +370,9 @@ class SoundManager {
       this.ambientSource.connect(windFilter);
       windFilter.connect(this.ambientGain!);
 
+      birdOsc.connect(birdGain);
+      birdGain.connect(this.ambientGain!);
+
       // Pan the leaves
       const panner = this.createPanner();
       if (panner) {
@@ -308,6 +394,51 @@ class SoundManager {
           leafFilter.connect(leafGain);
           leafGain.connect(this.ambientGain!);
       }
+
+      this.ambientSource.start();
+      this.secondarySource.start();
+  }
+
+  private setupCampfire() {
+      // Warm Glow (Brown Noise)
+      const buffer = this.createNoiseBuffer('brown');
+      this.ambientSource = this.ctx!.createBufferSource();
+      this.ambientSource.buffer = buffer;
+      this.ambientSource.loop = true;
+
+      const filter = this.ctx!.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 150;
+
+      // Crackle (White Noise, High-passed, Randomly Gated)
+      const crackleBuffer = this.createNoiseBuffer('white');
+      this.secondarySource = this.ctx!.createBufferSource();
+      this.secondarySource.buffer = crackleBuffer;
+      this.secondarySource.loop = true;
+
+      const crackleFilter = this.ctx!.createBiquadFilter();
+      crackleFilter.type = 'highpass';
+      crackleFilter.frequency.value = 5000;
+
+      const crackleGain = this.ctx!.createGain();
+      crackleGain.gain.value = 0;
+
+      const crackleTrigger = () => {
+          if (!this.isAmbientPlaying) return;
+          const now = this.ctx!.currentTime;
+          const duration = 0.01 + Math.random() * 0.05;
+          crackleGain.gain.setValueAtTime(0.1 + Math.random() * 0.2, now);
+          crackleGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+          setTimeout(crackleTrigger, 50 + Math.random() * 500);
+      };
+      setTimeout(crackleTrigger, 100);
+
+      this.ambientSource.connect(filter);
+      filter.connect(this.ambientGain!);
+
+      this.secondarySource.connect(crackleFilter);
+      crackleFilter.connect(crackleGain);
+      crackleGain.connect(this.ambientGain!);
 
       this.ambientSource.start();
       this.secondarySource.start();

@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -18,7 +19,7 @@ interface MadlibsSetupProps {
 export const MadlibsSetup: React.FC<MadlibsSetupProps> = ({ input, handleMadLibChange, onChange, isAvatarLoading, onGenerateAvatar }) => {
     // Calculate progress for feedback
     const totalFields = 5;
-    const filledFields = Object.values(input.madlibs).filter(v => v.trim().length > 0).length;
+    const filledFields = Object.values(input.madlibs).filter(v => (v as string).trim().length > 0).length;
     const isComplete = filledFields === totalFields;
 
     return (

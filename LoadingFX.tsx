@@ -50,22 +50,25 @@ export const LoadingFX: React.FC<LoadingFXProps> = ({ embedded = false, mode = '
     
     // Generate background stars/dust based on mode
     const backgroundParticles = useMemo(() => {
-        const count = mode === 'sleep' ? 100 : (mode === 'madlibs' ? 50 : 60);
+        // Sleep gets more stars for a dense starfield; others get fewer for performance/clarity
+        const count = mode === 'sleep' ? 120 : (mode === 'madlibs' ? 50 : 80);
+        
         return Array.from({ length: count }).map((_, i) => ({
             id: i,
             left: `${Math.random() * 100}%`,
             top: `${Math.random() * 100}%`,
-            size: mode === 'sleep' ? Math.random() * 2 + 0.5 : Math.random() * 4 + 1,
+            size: mode === 'sleep' ? Math.random() * 2 + 1 : Math.random() * 4 + 1,
+            // Mode-specific color palettes
             color: mode === 'madlibs' 
                 ? ['#FCD34D', '#EF4444', '#60A5FA', '#A78BFA', '#34D399'][Math.floor(Math.random() * 5)] 
-                : '#FFFFFF',
+                : (mode === 'sleep' ? ['#FFFFFF', '#E0E7FF', '#C7D2FE'][Math.floor(Math.random() * 3)] : '#FFFFFF'),
             delay: Math.random() * 5,
-            duration: mode === 'sleep' ? Math.random() * 3 + 3 : Math.random() * 1.5 + 0.5
+            duration: mode === 'sleep' ? Math.random() * 3 + 2 : Math.random() * 1.5 + 0.5
         }));
     }, [mode]);
 
     useEffect(() => {
-        // Dynamic Word Particles (Foreground)
+        // Dynamic Word Particles (Foreground) - Only for energetic modes
         const particleInterval = setInterval(() => {
             const id = Date.now();
             const text = PARTICLES_WORDS[Math.floor(Math.random() * PARTICLES_WORDS.length)];
@@ -133,7 +136,7 @@ export const LoadingFX: React.FC<LoadingFXProps> = ({ embedded = false, mode = '
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
-            className={`${embedded ? 'absolute' : 'fixed'} inset-0 z-[1000] flex flex-col items-center justify-center overflow-hidden origin-top ${bgClass}`}
+            className={`${embedded ? 'absolute rounded-xl border-4 border-white/10' : 'fixed'} inset-0 z-[1000] flex flex-col items-center justify-center overflow-hidden origin-top ${bgClass}`}
         >
             {/* Cinematic Overlay Texture */}
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 animate-pulse pointer-events-none z-10 mix-blend-overlay"></div>
@@ -144,25 +147,28 @@ export const LoadingFX: React.FC<LoadingFXProps> = ({ embedded = false, mode = '
                     // Animation logic based on mode
                     const variants = {
                         sleep: {
-                            opacity: [0, 0.7, 0],
-                            scale: [1, 1.2, 1],
-                            y: [0, -20, 0], // Gentle drift
+                            opacity: [0, 0.8, 0], // Gentle twinkling
+                            scale: [1, 1.5, 1],   // Pulsing
+                            y: [0, -10, 0],       // Minimal drift
                         },
                         classic: {
                             opacity: [0, 1, 0],
-                            scale: [0, 1, 0],
-                            y: [100, -100], // Upward motion (warp speed effect)
+                            scale: [0.5, 1, 0.5],
+                            y: [100, -100],       // Upward warp speed
                         },
                         madlibs: {
                             opacity: [0, 1, 0],
                             scale: [0, 1.5, 0],
-                            x: [0, Math.random() * 100 - 50], // Chaotic jitter
-                            y: [0, Math.random() * 100 - 50],
-                            rotate: [0, 360]
+                            x: [0, Math.random() * 200 - 100], // Wild horizontal chaos
+                            y: [0, Math.random() * 200 - 100], // Wild vertical chaos
+                            rotate: [0, 720]
                         }
                     };
 
                     const activeVariant = mode === 'sleep' ? variants.sleep : (mode === 'madlibs' ? variants.madlibs : variants.classic);
+                    
+                    // Sleep mode easing is smoother; others are linear/energetic
+                    const ease = mode === 'sleep' ? "easeInOut" : "linear";
 
                     return (
                         <motion.div 
@@ -173,7 +179,7 @@ export const LoadingFX: React.FC<LoadingFXProps> = ({ embedded = false, mode = '
                                 duration: p.duration, 
                                 repeat: Infinity, 
                                 delay: p.delay,
-                                ease: mode === 'sleep' ? "easeInOut" : "linear" 
+                                ease: ease
                             }}
                             className={`absolute rounded-full ${mode === 'sleep' ? 'blur-[0.5px]' : ''}`}
                             style={{ 
@@ -182,14 +188,14 @@ export const LoadingFX: React.FC<LoadingFXProps> = ({ embedded = false, mode = '
                                 width: `${p.size}px`, 
                                 height: `${p.size}px`,
                                 backgroundColor: p.color,
-                                boxShadow: mode === 'sleep' ? `0 0 ${p.size * 2}px ${p.color}` : 'none'
+                                boxShadow: mode === 'sleep' ? `0 0 ${p.size * 3}px ${p.color}` : 'none'
                             }} 
                         />
                     );
                 })}
             </div>
 
-            {/* Floating Words */}
+            {/* Floating Words (Non-Sleep Only) */}
             <AnimatePresence>
                 {particles.map(p => (
                     <motion.div 

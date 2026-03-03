@@ -4,11 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { StoryFull, StoryState } from '../types';
 import { SyncedText } from './SyncedText';
-import { soundManager } from '../SoundManager';
 
 interface ReadingViewProps {
     story: StoryFull;
@@ -18,221 +17,108 @@ interface ReadingViewProps {
     narrationDuration: number;
     isNarrating: boolean;
     isNarrationLoading: boolean;
-    scenes?: Record<number, string>;
-    isSceneLoading?: boolean;
-    onGenerateScene?: () => void;
-    onGenerateSceneIndex?: (index: number) => void;
     onTogglePlayback: () => void;
-    onStopNarration: () => void;
     onChoice: (choice: string) => void;
     onReset: () => void;
-    toggleMute: () => void;
-    isMuted: boolean;
-    playbackRate: number;
-    setPlaybackRate: (rate: number) => void;
-    onSubmitFeedback?: (rating: number, text: string) => void;
     fontSize: 'normal' | 'large';
-    onChangeFontSize: (size: 'normal' | 'large') => void;
 }
 
 export const ReadingView: React.FC<ReadingViewProps> = ({
     story, input, currentPartIndex, narrationTime, narrationDuration, isNarrating, isNarrationLoading,
-    scenes = {}, onTogglePlayback, onStopNarration, onChoice, onReset, toggleMute, isMuted, playbackRate, setPlaybackRate, 
-    fontSize, onChangeFontSize
+    onTogglePlayback, onChoice, onReset, fontSize
 }) => {
-    const scrollRef = useRef<HTMLDivElement>(null);
     const isSleepMode = input.mode === 'sleep';
-
     const progressPercent = narrationDuration > 0 ? (narrationTime / narrationDuration) * 100 : 0;
-    const storyProgress = ((currentPartIndex + 1) / story.parts.length) * 100;
-
-    // Responsive fluid font size
-    const getFontSizeClass = () => fontSize === 'large' ? 'text-xl md:text-3xl lg:text-4xl' : 'text-base md:text-xl lg:text-2xl';
-
-    // Auto-scroll logic for extended sleep narratives
-    useEffect(() => {
-        if (isSleepMode && scrollRef.current) {
-            const container = scrollRef.current;
-            const currentPart = container.querySelector(`[data-part="${currentPartIndex}"]`);
-            if (currentPart) {
-                currentPart.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }
-    }, [currentPartIndex, isSleepMode]);
+    const isExpanding = !story.isComplete;
 
     return (
-        <motion.main 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            className="relative w-full h-[100dvh] flex flex-col bg-slate-950 font-serif overflow-hidden" 
-            role="main" 
-            aria-label={`Reading story: ${story.title}`}
-        >
+        <div className={`min-h-screen w-full flex flex-col transition-colors duration-1000 ${isSleepMode ? 'bg-indigo-950 text-indigo-100' : 'bg-slate-50 text-slate-900'}`}>
             
-            {/* Header Controls */}
-            <header className="absolute top-0 inset-x-0 p-3 md:p-4 flex justify-between items-center z-[120] pointer-events-none">
-                <div className="pointer-events-auto flex gap-2">
-                    <button 
-                        onClick={() => { onReset(); soundManager.playChoice(); }} 
-                        className="bg-black/40 hover:bg-black/60 px-3 md:px-5 py-2 rounded-full border border-white/20 backdrop-blur-lg text-white font-comic text-[10px] md:text-xs uppercase tracking-widest outline-none ring-blue-500 focus:ring-2" 
-                        aria-label="Back to home"
-                    >Menu</button>
+            {/* Epic Navigation Bar */}
+            <header className="p-6 flex justify-between items-center border-b border-white/10 backdrop-blur-md sticky top-0 z-50">
+                <button onClick={onReset} className="font-comic text-xl uppercase tracking-widest text-blue-400">Exit</button>
+                <div className="flex flex-col items-center">
+                    <h2 className="font-comic text-sm opacity-50 uppercase tracking-tighter">Issue: {story.title}</h2>
+                    {isExpanding && (
+                        <motion.div 
+                            animate={{ opacity: [0.4, 1, 0.4] }} 
+                            transition={{ duration: 2, repeat: Infinity }}
+                            className="text-[10px] text-green-400 font-mono font-bold"
+                        >
+                            • WRITING EPIC FINALE...
+                        </motion.div>
+                    )}
                 </div>
-                <div className="pointer-events-auto flex gap-2 md:gap-3">
-                    <button 
-                        onClick={() => { onChangeFontSize(fontSize === 'normal' ? 'large' : 'normal'); soundManager.playChoice(); }} 
-                        className="bg-black/40 hover:bg-black/60 w-10 h-10 md:w-12 md:h-12 rounded-full border border-white/20 backdrop-blur-lg text-white font-bold flex items-center justify-center outline-none ring-blue-500 focus:ring-2" 
-                        aria-label="Adjust font size"
-                        title="Text Size"
-                    >
-                        {fontSize === 'normal' ? 'A' : 'A+'}
-                    </button>
-                    <button 
-                        onClick={() => { toggleMute(); soundManager.playChoice(); }} 
-                        className="bg-black/40 hover:bg-black/60 w-10 h-10 md:w-12 md:h-12 rounded-full border border-white/20 backdrop-blur-lg text-xl md:text-2xl flex items-center justify-center outline-none ring-blue-500 focus:ring-2" 
-                        aria-label={isMuted ? "Unmute" : "Mute"}
-                    >
-                        {isMuted ? '🔇' : '🔊'}
-                    </button>
+                <div className="w-10 h-10 rounded-full border-2 border-current flex items-center justify-center font-bold">
+                    {currentPartIndex + 1}
                 </div>
             </header>
 
-            {/* Content Scroller */}
-            <div 
-                ref={scrollRef} 
-                className={`flex-1 overflow-y-auto custom-scrollbar transition-colors duration-2000 px-4 md:px-12 lg:px-24 py-16 md:py-24 ${isSleepMode ? 'bg-indigo-950 text-indigo-100/90' : 'bg-[#fcf8ef] text-gray-800'}`}
-            >
-                <article className="max-w-prose mx-auto space-y-12 md:space-y-16 pb-48">
-                    <header className="flex flex-col items-center mb-12">
-                        <motion.div 
-                            layoutId="avatar" 
-                            className={`w-28 h-28 md:w-40 md:h-40 border-[6px] border-black rounded-3xl md:rounded-[2.5rem] overflow-hidden shadow-2xl mb-8 bg-white shrink-0 rotate-1 ${isSleepMode ? 'opacity-80' : ''}`}
-                        >
-                            <img src={scenes[currentPartIndex] || input.heroAvatarUrl} alt={`Scene ${currentPartIndex + 1}`} className="w-full h-full object-cover" />
-                        </motion.div>
-                        <h1 className="text-3xl md:text-5xl lg:text-6xl text-center uppercase font-black tracking-tight leading-none px-4 drop-shadow-sm">
-                            {story.title}
-                        </h1>
-                        <div className="h-1.5 w-16 bg-red-600 mt-6 rounded-full opacity-50"></div>
-                    </header>
-
-                    {story.parts.map((part, i) => (
-                        <motion.section 
-                            key={i} 
-                            data-part={i}
-                            initial={{ opacity: 0, y: 40 }} 
-                            whileInView={{ opacity: 1, y: 0 }} 
-                            viewport={{ once: true, margin: "-10% 0% -10% 0%" }}
-                            className={`${getFontSizeClass()} leading-relaxed font-serif ${i > currentPartIndex ? 'opacity-10 grayscale blur-[2px] pointer-events-none' : 'opacity-100'} transition-all duration-1000`}
-                        >
-                            <SyncedText text={part.text} isActive={isNarrating && i === currentPartIndex} currentTime={narrationTime} duration={narrationDuration} />
-                            
-                            {i === currentPartIndex && part.choices && part.choices.length > 0 && !isSleepMode && (
-                                <nav className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-4" aria-label="Story Decisions">
-                                    {part.choices.map((c, idx) => (
-                                        <button 
-                                            key={idx} 
-                                            onClick={() => onChoice(c)} 
-                                            className="comic-btn p-4 text-left bg-blue-500 text-white rounded-2xl border-4 border-black shadow-[6px_6px_0px_black] hover:scale-[1.03] active:scale-[0.97] transition-all text-sm md:text-lg font-comic uppercase tracking-wide"
-                                        >
-                                            {c}
-                                        </button>
-                                    ))}
-                                </nav>
-                            )}
-                        </motion.section>
-                    ))}
-
-                    {currentPartIndex === story.parts.length - 1 && (
-                        <footer className="pt-24 border-t-4 border-dashed border-black/10 space-y-12 text-center">
-                            <section className="bg-black/5 p-6 md:p-10 rounded-3xl border-2 border-black/10">
-                                <h3 className="font-comic text-xl md:text-3xl uppercase mb-4 tracking-widest text-red-600">The Wise Hero's Lesson</h3>
-                                <p className="text-xl md:text-2xl leading-relaxed italic">"{story.lesson}"</p>
-                            </section>
-                            
-                            <section className="bg-yellow-100/50 p-6 md:p-8 rounded-3xl border-2 border-yellow-200">
-                                <h4 className="font-comic text-lg md:text-xl uppercase mb-2 text-yellow-800 tracking-wide">A Chuckle for the Road</h4>
-                                <p className="text-lg md:text-xl font-comic text-slate-700">{story.joke}</p>
-                            </section>
-
-                            <button 
-                                onClick={() => { onReset(); soundManager.playChoice(); }} 
-                                className="comic-btn w-full bg-red-600 text-white py-5 md:py-6 text-2xl md:text-4xl rounded-2xl shadow-[10px_10px_0px_black] uppercase font-comic tracking-widest"
-                            >
-                                MISSION COMPLETE
-                            </button>
-                        </footer>
-                    )}
-                </article>
-            </div>
-
-            {/* Persistent Control Hub */}
-            <motion.nav 
-                layout 
-                className={`p-3 md:p-6 border-t-[6px] border-black z-[130] flex flex-wrap items-center justify-between md:justify-center gap-4 md:gap-12 shadow-[0_-10px_30px_rgba(0,0,0,0.3)] ${isSleepMode ? 'bg-indigo-900 text-white' : 'bg-white text-black'}`}
-                aria-label="Playback Controls"
-            >
-                <div className="flex flex-col items-center md:items-start order-2 md:order-1 min-w-[100px]">
-                    <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] opacity-50 mb-1">
-                        Journey Segment {currentPartIndex + 1} / {story.parts.length}
-                    </span>
-                    <div className="w-20 md:w-32 h-2 bg-black/10 rounded-full overflow-hidden shadow-inner">
-                        <motion.div 
-                            className="h-full bg-blue-500 rounded-full" 
-                            initial={{ width: 0 }}
-                            animate={{ width: `${storyProgress}%` }}
-                            transition={{ type: 'spring', stiffness: 50 }}
+            {/* Main Narrative Area */}
+            <main className="flex-1 max-w-3xl mx-auto w-full p-8 md:p-16">
+                <AnimatePresence mode="wait">
+                    <motion.article 
+                        key={currentPartIndex}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className={`${fontSize === 'large' ? 'text-3xl' : 'text-xl'} font-serif leading-relaxed`}
+                    >
+                        <SyncedText 
+                            text={story.parts[currentPartIndex].text} 
+                            isActive={isNarrating} 
+                            currentTime={narrationTime} 
+                            duration={narrationDuration} 
                         />
-                    </div>
-                </div>
+                    </motion.article>
+                </AnimatePresence>
 
-                <div className="flex items-center gap-4 md:gap-8 order-1 md:order-2">
-                    <div className="relative w-14 h-14 md:w-20 md:h-20 flex items-center justify-center">
-                        <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none">
-                            <circle 
-                                cx="50%" cy="50%" r="42%" 
-                                fill="transparent" 
-                                stroke="currentColor" 
-                                strokeWidth="4" 
-                                strokeDasharray="260" 
-                                strokeDashoffset={260 - (260 * progressPercent) / 100} 
-                                className="opacity-20 transition-all duration-300" 
-                            />
-                        </svg>
-                        <button 
-                            onClick={() => { onTogglePlayback(); soundManager.playChoice(); }} 
-                            disabled={isNarrationLoading}
-                            className={`text-3xl md:text-5xl hover:scale-110 active:scale-90 transition-transform flex items-center justify-center outline-none ${isNarrationLoading ? 'animate-pulse opacity-50' : ''}`} 
-                            aria-label={isNarrating ? "Pause" : "Play"}
-                        >
-                            {isNarrationLoading ? '⏳' : (isNarrating ? '⏸️' : '▶️')}
-                        </button>
-                    </div>
-                    <button 
-                        onClick={() => { onStopNarration(); soundManager.playChoice(); }} 
-                        className="text-2xl md:text-3xl opacity-30 hover:opacity-100 hover:text-red-500 transition-all outline-none" 
-                        aria-label="Stop Playback"
-                    >⏹️</button>
-                </div>
-
-                <div className="flex flex-col items-center md:items-end order-3 md:order-3 min-w-[120px]">
-                    <span className="font-comic text-[10px] md:text-sm uppercase tracking-wider opacity-60">
-                        {input.narratorVoice} Spirit
-                    </span>
-                    <div className="flex gap-1.5 mt-2" role="group" aria-label="Playback speed">
-                        {[0.8, 1.0, 1.2].map(r => (
+                {/* Interaction Footer */}
+                {!isSleepMode && story.parts[currentPartIndex].choices && (
+                    <div className="mt-12 grid gap-4">
+                        {story.parts[currentPartIndex].choices?.map((c, i) => (
                             <button 
-                                key={r} 
-                                onClick={() => { setPlaybackRate(r); soundManager.playChoice(); }} 
-                                className={`text-[8px] md:text-[10px] font-black border-2 border-current px-2 py-0.5 rounded-full transition-all ${playbackRate === r ? 'bg-current text-white scale-110' : 'opacity-30 hover:opacity-60'}`}
-                                aria-pressed={playbackRate === r}
+                                key={i} 
+                                onClick={() => onChoice(c)}
+                                className="comic-btn bg-blue-600 text-white p-6 text-xl rounded-2xl"
                             >
-                                {r}x
+                                {c}
                             </button>
                         ))}
                     </div>
+                )}
+            </main>
+
+            {/* Audio Control Dock */}
+            <footer className="p-8 border-t border-white/5 bg-black/20 backdrop-blur-2xl">
+                <div className="flex items-center gap-8 justify-center">
+                    <button 
+                        onClick={onTogglePlayback}
+                        className="w-20 h-20 rounded-full bg-blue-500 flex items-center justify-center text-3xl shadow-2xl relative overflow-hidden"
+                    >
+                        {isNarrationLoading ? '⏳' : (isNarrating ? '⏸' : '▶')}
+                        {/* Waveform Visualization Placeholder */}
+                        {isNarrating && (
+                            <div className="absolute inset-0 flex items-end gap-1 px-4 pb-2 opacity-30">
+                                {[1,2,3,4,5].map(i => (
+                                    <motion.div 
+                                        key={i} 
+                                        animate={{ height: ['20%', '80%', '20%'] }} 
+                                        transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.1 }}
+                                        className="flex-1 bg-white rounded-t-sm"
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </button>
+                    <div className="flex-1 max-w-xs h-2 bg-white/10 rounded-full overflow-hidden">
+                        <motion.div 
+                            className="h-full bg-blue-400"
+                            animate={{ width: `${progressPercent}%` }}
+                        />
+                    </div>
                 </div>
-            </motion.nav>
-        </motion.main>
+            </footer>
+        </div>
     );
 };

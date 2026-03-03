@@ -5,41 +5,27 @@
 */
 
 import { useState, useCallback, useEffect } from 'react';
-import { StoryState, StoryFull, AppPhase, MadLibState, SleepConfig, UserPreferences, DEFAULT_PREFERENCES } from '../types';
+import { StoryState, StoryFull, AppPhase, MadLibState, SleepConfig, UserPreferences, DEFAULT_PREFERENCES, StoryOutline, StoryPart } from '../types';
 import { AIClient } from '../AIClient';
 import { narrationManager } from '../NarrationManager';
 import { soundManager } from '../SoundManager';
 import { storageManager, CachedStory } from '../lib/StorageManager';
-import { logger } from '../lib/Logger';
 
 export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowApiKeyDialog: (show: boolean) => void) => {
     const [phase, setPhase] = useState<AppPhase>('setup');
     const [isLoading, setIsLoading] = useState(false);
     const [isAvatarLoading, setIsAvatarLoading] = useState(false);
+    const [isSceneLoading, setIsSceneLoading] = useState(false);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     const [history, setHistory] = useState<CachedStory[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [userPreferences, setUserPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
     
     const [input, setInput] = useState<StoryState>({
-        heroName: '',
-        heroPower: '',
-        setting: '',
-        sidekick: '',
-        problem: '',
-        heroAvatarUrl: '',
-        mode: 'classic',
-        madlibs: { adjective: '', place: '', food: '', sillyWord: '', animal: '' },
-        sleepConfig: { 
-            subMode: 'automatic', 
-            texture: '', 
-            sound: '', 
-            scent: '', 
-            theme: DEFAULT_PREFERENCES.sleepTheme,
-            ambientTheme: 'auto'
-        },
-        narratorVoice: DEFAULT_PREFERENCES.narratorVoice,
-        storyLength: DEFAULT_PREFERENCES.storyLength
+        heroName: '', heroPower: '', setting: '', sidekick: '', problem: '', heroAvatarUrl: '',
+        mode: 'classic', madlibs: { adjective: '', place: '', food: '', sillyWord: '', animal: '' },
+        sleepConfig: { subMode: 'automatic', texture: '', sound: '', scent: '', theme: DEFAULT_PREFERENCES.sleepTheme, ambientTheme: 'auto' },
+        narratorVoice: DEFAULT_PREFERENCES.narratorVoice, storyLength: DEFAULT_PREFERENCES.storyLength
     });
 
     const [story, setStory] = useState<StoryFull | null>(null);
@@ -47,38 +33,15 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
     const [scenes, setScenes] = useState<Record<number, string>>({});
     const [isNarrating, setIsNarrating] = useState(false);
     const [isNarrationLoading, setIsNarrationLoading] = useState(false);
-    const [isSceneLoading, setIsSceneLoading] = useState(false);
     const [currentStoryId, setCurrentStoryId] = useState<string | null>(null);
 
-    // Load preferences and history
+    // Sync online status and load history
     useEffect(() => {
-        const initData = async () => {
-            try {
-                // Load Prefs
-                const prefs = await storageManager.getPreferences();
-                setUserPreferences(prefs);
-                
-                // Update input defaults with loaded prefs
-                setInput(prev => ({
-                    ...prev,
-                    narratorVoice: prefs.narratorVoice,
-                    storyLength: prefs.storyLength,
-                    sleepConfig: { ...prev.sleepConfig, theme: prefs.sleepTheme }
-                }));
-
-                // Load History
-                const hist = await storageManager.getAllStories();
-                setHistory(hist);
-            } catch (e) {
-                console.error("Failed to load data", e);
-            }
-        };
-
         const handleStatus = () => setIsOnline(navigator.onLine);
         window.addEventListener('online', handleStatus);
         window.addEventListener('offline', handleStatus);
         
-        initData();
+        storageManager.getAllStories().then(setHistory);
         
         return () => {
             window.removeEventListener('online', handleStatus);
@@ -86,38 +49,75 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
         };
     }, []);
 
-    const saveUserPreferences = useCallback(async (newPrefs: UserPreferences) => {
-        await storageManager.savePreferences(newPrefs);
-        setUserPreferences(newPrefs);
+    // Main Story Generation Logic: Outline -> Initial Parts -> Background Expansion
+    const generateStory = useCallback(async () => {
+        if (!isOnline) return;
+        if (!(await validateApiKey())) return;
         
-        // Update current session if in Setup phase
-        if (phase === 'setup') {
-            setInput(prev => ({
-                ...prev,
-                narratorVoice: newPrefs.narratorVoice,
-                storyLength: newPrefs.storyLength,
-                sleepConfig: { ...prev.sleepConfig, theme: newPrefs.sleepTheme }
-            }));
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            // 1. Generate Outline (The Blueprint)
+            const outline = await AIClient.generateOutline(input);
+            
+            // 2. Generate Initial Chapters (First 2) to start immediately
+            const initialParts = await AIClient.expandChapters(outline, 0, 1, input);
+            
+            // 3. Generate Finale Metadata
+            const finale = await AIClient.generateFinale(outline, input);
+
+            const initialStory: StoryFull = {
+                title: outline.title,
+                parts: initialParts,
+                vocabWord: outline.vocabWord,
+                rewardBadge: outline.rewardBadge,
+                joke: finale.joke,
+                lesson: finale.lesson,
+                tomorrowHook: finale.tomorrowHook,
+                isComplete: false
+            };
+
+            setStory(initialStory);
+            setPhase('reading');
+            setCurrentPartIndex(0);
+            setIsLoading(false); // Move to reading while expansion happens
+
+            // 4. Background Expansion Pipeline
+            expandRemainingChapters(outline, initialStory);
+
+        } catch (err: any) {
+            setError(err.message || "Failed to engage the Multiverse.");
+            setIsLoading(false);
         }
+    }, [input, isOnline, validateApiKey]);
+
+    const expandRemainingChapters = async (outline: StoryOutline, currentStory: StoryFull) => {
+        let allParts = [...currentStory.parts];
+        const batchSize = 2;
         
-        // Update global managers immediately
-        soundManager.setMuted(newPrefs.isMuted);
-    }, [phase]);
+        for (let i = 2; i < outline.totalExpectedParts; i += batchSize) {
+            try {
+                const end = Math.min(i + batchSize - 1, outline.totalExpectedParts - 1);
+                const newParts = await AIClient.expandChapters(outline, i, end, input);
+                allParts = [...allParts, ...newParts];
+                
+                // Update story state incrementally
+                setStory(prev => prev ? { 
+                    ...prev, 
+                    parts: allParts,
+                    isComplete: i + batchSize >= outline.totalExpectedParts
+                } : null);
 
-    const handleInputChange = useCallback((field: keyof StoryState, value: any) => {
-        setInput(prev => ({ ...prev, [field]: value }));
-        if (error) setError(null);
-    }, [error]);
+                // Auto-generate a scene for the first of the new batch
+                AIClient.generateSceneIllustration(newParts[0].text, input.heroName)
+                    .then(url => url && setScenes(prev => ({ ...prev, [i]: url })));
 
-    const handleMadLibChange = useCallback((field: keyof MadLibState, value: string) => {
-        setInput(prev => ({ ...prev, madlibs: { ...prev.madlibs, [field]: value } }));
-        if (error) setError(null);
-    }, [error]);
-
-    const handleSleepConfigChange = useCallback((field: keyof SleepConfig, value: string) => {
-        setInput(prev => ({ ...prev, sleepConfig: { ...prev.sleepConfig, [field]: value } }));
-        if (error) setError(null);
-    }, [error]);
+            } catch (err) {
+                console.error("Expansion failed for batch", i, err);
+            }
+        }
+    };
 
     const stopNarration = useCallback(() => {
         narrationManager.stop();
@@ -126,223 +126,100 @@ export const useStoryEngine = (validateApiKey: () => Promise<boolean>, setShowAp
 
     const playNarration = useCallback(async () => {
         if (!story) return;
-        const state = narrationManager.state;
-        if (state.isPaused) { narrationManager.play(); return; }
-        if (state.isPlaying) { narrationManager.pause(); return; }
-
         setIsNarrating(true);
         setIsNarrationLoading(true);
         try {
-            // 1. Play Current
             const currentPart = story.parts[currentPartIndex];
-            const isLastPart = currentPartIndex === story.parts.length - 1;
+            const isLastPart = currentPartIndex === story.parts.length - 1 && story.isComplete;
             const textToRead = isLastPart 
-                ? `${currentPart.text}. Today's lesson is: ${story.lesson}. Here is a joke: ${story.joke}. ${story.tomorrowHook}` 
+                ? `${currentPart.text}. Today's lesson is: ${story.lesson}. ${story.joke}. ${story.tomorrowHook}` 
                 : currentPart.text;
             
-            // Wait for current to load and play
             await narrationManager.fetchNarration(textToRead, input.narratorVoice, true);
-
-            // 2. Preload Next (Fire and Forget)
-            if (!isLastPart) {
-                const nextPart = story.parts[currentPartIndex + 1];
-                const nextIsLast = currentPartIndex + 1 === story.parts.length - 1;
-                const nextText = nextIsLast
-                    ? `${nextPart.text}. Today's lesson is: ${story.lesson}. Here is a joke: ${story.joke}. ${story.tomorrowHook}`
-                    : nextPart.text;
-                
-                // Preload with autoPlay = false
-                narrationManager.fetchNarration(nextText, input.narratorVoice, false)
-                    .catch(err => console.warn("Preload failed", err));
-            }
-
-        } catch (e) {
-            console.error(e);
         } finally {
             setIsNarrationLoading(false);
         }
     }, [story, currentPartIndex, input.narratorVoice]);
 
-    // Handle auto-advance for sleep mode
+    // Cleanup & Effects
     useEffect(() => {
         narrationManager.onEnded = () => {
             setIsNarrating(false);
             if (input.mode === 'sleep' && story) {
                 if (currentPartIndex < story.parts.length - 1) {
-                    // Reduced delay for continuous feel, relying on preloaded audio
-                    setTimeout(() => {
-                        setCurrentPartIndex(prev => prev + 1);
-                    }, 500); 
+                    setTimeout(() => setCurrentPartIndex(prev => prev + 1), 1000);
                 }
             }
         };
     }, [input.mode, story, currentPartIndex]);
 
-    // Effect to auto-play when part index changes in sleep mode
-    useEffect(() => {
-        if (input.mode === 'sleep' && phase === 'reading' && story) {
-            const timer = setTimeout(() => {
-                 if (!narrationManager.state.isPlaying) {
-                     playNarration();
-                 }
-            }, 100); // Fast auto-play trigger
-            return () => clearTimeout(timer);
-        }
-    }, [currentPartIndex, input.mode, phase, story, playNarration]);
-
-    const generateAvatar = useCallback(async () => {
-        if (!isOnline) {
-             setError("You are offline. Connect to internet to generate avatar.");
-             return;
-        }
-        
-        const name = input.mode === 'classic' || input.mode === 'sleep' ? input.heroName : input.madlibs.animal;
-        const power = input.mode === 'classic' ? input.heroPower : (input.mode === 'sleep' ? 'Sleeping' : input.madlibs.adjective);
-        
-        if (!name || name.trim().length === 0) {
-            setError("Please name your hero first!");
-            return;
-        }
-
-        if (!(await validateApiKey())) return;
-
-        setIsAvatarLoading(true);
-        setError(null);
-        try {
-            const url = await AIClient.generateAvatar(name, power || 'Dreaming');
-            if (url) {
-                handleInputChange('heroAvatarUrl', url);
-                soundManager.playSparkle();
-            }
-        } catch (error: any) {
-            logger.error("Avatar generation failed", error);
-            if (error.message?.includes("404")) {
-                setShowApiKeyDialog(true);
-            } else {
-                setError(`Avatar Error: ${error.message || "Could not generate hero."}`);
-            }
-        } finally {
-            setIsAvatarLoading(false);
-        }
-    }, [input, validateApiKey, handleInputChange, setShowApiKeyDialog, isOnline]);
-
-    const generateStory = useCallback(async () => {
-        if (!isOnline) {
-            setError("You are currently offline. Please connect to the internet to generate a new story.");
-            return;
-        }
-        if (!(await validateApiKey())) return;
-        
-        setIsLoading(true);
-        setError(null);
-
-        try {
-            const data = await AIClient.streamStory(input);
-            const id = await storageManager.saveStory(data, input.heroAvatarUrl);
-            setCurrentStoryId(id);
-            const newHistory = await storageManager.getAllStories();
-            setHistory(newHistory);
-            
-            setStory(data);
-            setPhase('reading');
-            setCurrentPartIndex(0);
-            soundManager.playPageTurn();
-        } catch (error: any) {
-            logger.error("Story generation failed", error);
-            if (error.message?.includes("404")) {
-                setShowApiKeyDialog(true);
-            } else {
-                const msg = error.message || "Unknown error";
-                setError(msg.includes("API_KEY") ? "Invalid API Key configuration." : `Mission Failed: ${msg}`);
-            }
-        } finally {
-            setIsLoading(false);
-        }
-    }, [input, validateApiKey, setShowApiKeyDialog, isOnline]);
-
-    const generateScene = useCallback(async (index: number) => {
-        if (!story || !currentStoryId || isSceneLoading || !isOnline) return;
-        if (!(await validateApiKey())) return;
-        
-        setIsSceneLoading(true);
-        try {
-            const context = story.parts[index].text;
-            const heroDescription = `${input.heroName} with ${input.heroPower}`;
-            const imageUrl = await AIClient.generateSceneIllustration(context, heroDescription);
-            if (imageUrl) {
-                setScenes(prev => ({ ...prev, [index]: imageUrl }));
-                await storageManager.saveStoryScene(currentStoryId, index, imageUrl);
-            }
-        } catch (error: any) {
-            logger.error('Scene generation failed', error);
-            if (error.message?.includes("404")) setShowApiKeyDialog(true);
-        } finally {
-            setIsSceneLoading(false);
-        }
-    }, [story, currentStoryId, input, isSceneLoading, isOnline, validateApiKey, setShowApiKeyDialog]);
-
-    const generateCurrentScene = useCallback(() => {
-        generateScene(currentPartIndex);
-    }, [generateScene, currentPartIndex]);
-
-    const prepareSequel = useCallback((cached: CachedStory) => {
-        setInput(prev => ({
-            ...prev,
-            heroName: cached.story.title.split(' ')[0],
-            heroAvatarUrl: cached.avatar
-        }));
-        setPhase('setup');
-        setError(null);
-    }, []);
-
-    const loadStoryFromHistory = useCallback((cached: CachedStory) => {
-        setStory(cached.story);
-        handleInputChange('heroAvatarUrl', cached.avatar || '');
-        setScenes(cached.scenes || {});
-        setPhase('reading');
-        setCurrentPartIndex(0);
-        soundManager.playPageTurn();
-        setError(null);
-    }, [handleInputChange]);
-
-    const handleChoice = useCallback((choice: string) => {
-        soundManager.playChoice();
-        stopNarration();
-        if (currentPartIndex < (story?.parts.length || 0) - 1) {
-            setCurrentPartIndex(prev => prev + 1);
-            soundManager.playPageTurn();
-            if (isNarrating) setTimeout(() => playNarration(), 1200);
-        }
-    }, [story, currentPartIndex, isNarrating, playNarration, stopNarration]);
-
-    const reset = useCallback(() => {
-        stopNarration();
-        setPhase('setup');
-        setStory(null);
-        setCurrentPartIndex(0);
-        setScenes({});
-        setInput(prev => ({ ...prev, heroAvatarUrl: '' }));
-        setError(null);
-    }, [stopNarration]);
-
-    const deleteStory = async (id: string) => { 
-        await storageManager.deleteStory(id); 
-        setHistory(await storageManager.getAllStories()); 
-    };
-
-    const submitFeedback = async (rating: number, text: string) => {
-        if (currentStoryId) {
-            await storageManager.updateFeedback(currentStoryId, rating, text);
-        }
-    };
-
     return {
         phase, isLoading, isAvatarLoading, isSceneLoading, input, story, currentPartIndex, scenes, isNarrating, isNarrationLoading,
         isOnline, history, error, userPreferences,
-        handleInputChange, handleMadLibChange, handleSleepConfigChange, 
-        generateAvatar, generateStory, generateCurrentScene, generateScene,
-        handleChoice, reset, playNarration, stopNarration, loadStoryFromHistory, 
-        prepareSequel, deleteStory, submitFeedback, saveUserPreferences,
+        handleInputChange: (f: any, v: any) => setInput(p => ({ ...p, [f]: v })),
+        handleMadLibChange: (field: keyof MadLibState, value: string) => {
+            setInput(prev => ({ ...prev, madlibs: { ...prev.madlibs, [field]: value } }));
+        },
+        handleSleepConfigChange: (field: keyof SleepConfig, value: string) => {
+            setInput(prev => ({ ...prev, sleepConfig: { ...prev.sleepConfig, [field]: value } }));
+        },
+        generateAvatar: async () => {
+            setIsAvatarLoading(true);
+            const url = await AIClient.generateAvatar(input.heroName, input.heroPower);
+            if (url) setInput(p => ({ ...p, heroAvatarUrl: url }));
+            setIsAvatarLoading(false);
+        },
+        generateStory,
+        generateCurrentScene: async () => {
+            const currentPart = story?.parts[currentPartIndex];
+            if (currentPart) {
+                setIsSceneLoading(true);
+                const url = await AIClient.generateSceneIllustration(currentPart.text, input.heroName);
+                if (url) setScenes(prev => ({ ...prev, [currentPartIndex]: url }));
+                setIsSceneLoading(false);
+            }
+        },
+        generateScene: async (index: number) => {
+            const part = story?.parts[index];
+            if (part) {
+                const url = await AIClient.generateSceneIllustration(part.text, input.heroName);
+                if (url) setScenes(prev => ({ ...prev, [index]: url }));
+            }
+        },
+        prepareSequel: (cached: CachedStory) => {
+            setInput(prev => ({
+                ...prev,
+                heroName: cached.story.title.split(' ')[0], 
+                setting: 'A new adventure'
+            }));
+            setPhase('setup');
+        },
+        handleChoice: (choice: string) => {
+            if (currentPartIndex < (story?.parts.length || 0) - 1) {
+                setCurrentPartIndex(p => p + 1);
+                soundManager.playPageTurn();
+            }
+        },
+        reset: () => { setPhase('setup'); setStory(null); },
+        playNarration, 
+        stopNarration, 
+        loadStoryFromHistory: (cached: CachedStory) => {
+            setStory(cached.story);
+            setInput(prev => ({ ...prev, heroAvatarUrl: cached.avatar || '' }));
+            setPhase('reading');
+            setCurrentPartIndex(0);
+            setScenes(cached.scenes || {});
+        },
+        deleteStory: async (id: string) => {
+            await storageManager.deleteStory(id);
+            setHistory(prev => prev.filter(h => h.id !== id));
+        },
+        submitFeedback: async (rating: number, text: string) => {
+            if (currentStoryId) {
+                await storageManager.updateFeedback(currentStoryId, rating, text);
+            }
+        },
+        saveUserPreferences: (p: any) => setUserPreferences(p),
         clearError: () => setError(null)
     };
 };

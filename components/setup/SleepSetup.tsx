@@ -27,10 +27,11 @@ const sleepThemes = [
 
 const ambientThemes: { id: AmbientTheme, label: string, icon: string }[] = [
     { id: 'rain', label: 'Gentle Rain', icon: '🌧️' },
-    { id: 'forest', label: 'Forest Night', icon: '🌲' },
+    { id: 'forest', label: 'Forest Ambiance', icon: '🌲' },
     { id: 'ocean', label: 'Midnight Ocean', icon: '🌊' },
     { id: 'crickets', label: 'Night Crickets', icon: '🦗' },
     { id: 'space', label: 'Cosmic Hum', icon: '🛰️' },
+    { id: 'campfire', label: 'Warm Campfire', icon: '🔥' },
     { id: 'magic', label: 'Ethereal Spark', icon: '✨' }
 ];
 
